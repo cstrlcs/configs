@@ -1,0 +1,17 @@
+{
+  "name": "@cstrlcs/configs",
+  "type": "module",
+  "description": "Strict configurations for Biome, TypeScript and Prettier.",
+  "version": "0.0.1",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Lucas Castro (https://github.com/cstrlcs/)",
+  "files": [
+    "tsconfig.json",
+    "biome.json"
+  ],
+  "peerDependencies": {
+    "@biomejs/biome": "1.5.3",
+    "typescript": "5.3.3"
+  }
+}
