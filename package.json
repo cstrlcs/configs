@@ -2,7 +2,7 @@
   "name": "@cstrlcs/configs",
   "type": "module",
   "description": "Strict configurations for Biome, TypeScript and Prettier.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "index.js",
   "license": "MIT",
   "author": "Lucas Castro (https://github.com/cstrlcs/)",
