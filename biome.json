@@ -3,8 +3,16 @@
   "linter": {
     "rules": {
       "all": true,
+      "style": {
+        "noDefaultExport": "off"
+      },
+      "complexity": {
+        "useSimplifiedLogicExpression": "off"
+      },
       "nursery": {
-        "all": true
+        "all": true,
+        "noUndeclaredDependencies": "off",
+        "noNodejsModules": "off"
       }
     }
   }
