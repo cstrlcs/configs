@@ -2,7 +2,7 @@
   "name": "@cstrlcs/configs",
   "type": "module",
   "description": "Strict configurations for Biome and TypeScript.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "main": "index.js",
   "license": "MIT",
   "author": "Lucas Castro (https://github.com/cstrlcs/)",

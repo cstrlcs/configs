@@ -6,6 +6,9 @@
       "style": {
         "noDefaultExport": "off"
       },
+      "correctness": {
+        "noUnusedImports": "warn"
+      },
       "complexity": {
         "useSimplifiedLogicExpression": "off"
       },
