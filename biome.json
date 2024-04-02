@@ -1,22 +1,15 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.6.1/schema.json",
-  "linter": {
-    "rules": {
-      "all": true,
-      "style": {
-        "noDefaultExport": "off"
-      },
-      "correctness": {
-        "noUnusedImports": "warn"
-      },
-      "complexity": {
-        "useSimplifiedLogicExpression": "off"
-      },
-      "nursery": {
-        "all": true,
-        "noUndeclaredDependencies": "off",
-        "noNodejsModules": "off"
-      }
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/1.6.3/schema.json",
+	"linter": {
+		"rules": {
+			"all": true,
+			"correctness": {
+				"noUnusedImports": "off"
+			},
+			"nursery": {
+				"all": true,
+				"noUndeclaredDependencies": "off"
+			}
+		}
+	}
 }

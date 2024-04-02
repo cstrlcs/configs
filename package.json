@@ -1,21 +1,20 @@
 {
-  "name": "@cstrlcs/configs",
-  "type": "module",
-  "description": "Strict configurations for Biome and TypeScript.",
-  "version": "0.0.5",
-  "main": "index.js",
-  "license": "MIT",
-  "author": "Lucas Castro (https://github.com/cstrlcs/)",
-  "scripts": {
-    "start": "bun index.js",
-    "check": "biome check"
-  },
-  "files": [
-    "tsconfig.json",
-    "biome.json"
-  ],
-  "peerDependencies": {
-    "@biomejs/biome": "1.6.1",
-    "typescript": "5.4.2"
-  }
+	"name": "@cstrlcs/configs",
+	"type": "module",
+	"description": "Strict configurations for Biome and TypeScript.",
+	"version": "0.0.6",
+	"main": "index.js",
+	"license": "MIT",
+	"author": "Lucas Castro (https://github.com/cstrlcs/)",
+	"scripts": {
+		"check": "biome check ."
+	},
+	"files": ["tsconfig.json", "biome.json"],
+	"exports": {
+		"./biome": "./biome.json"
+	},
+	"peerDependencies": {
+		"@biomejs/biome": "1.6.3",
+		"typescript": "5.4.3"
+	}
 }
