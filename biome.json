@@ -4,7 +4,16 @@
 		"rules": {
 			"all": true,
 			"correctness": {
-				"noUnusedImports": "off"
+				"noUnusedImports": "off",
+				"noUnusedVariables": "off"
+			},
+			"complexity": {
+				"useLiteralKeys": "off"
+			},
+			"style": {
+				"noDefaultExport": "off",
+				"useFilenamingConvention": "off",
+				"useNamingConvention": "off"
 			},
 			"nursery": {
 				"all": true,
