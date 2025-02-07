@@ -2,7 +2,7 @@
 	"name": "@cstrlcs/configs",
 	"type": "module",
 	"description": "Strict configurations for Biome and TypeScript.",
-	"version": "0.0.8",
+	"version": "1.0.0",
 	"main": "index.js",
 	"license": "MIT",
 	"author": "Lucas Castro (https://github.com/cstrlcs/)",
@@ -15,7 +15,7 @@
 		"./tsconfig": "./tsconfig.json"
 	},
 	"peerDependencies": {
-		"@biomejs/biome": "1.6.4",
-		"typescript": "5.4.4"
+		"@biomejs/biome": "1.9.4",
+		"typescript": "5.7.3"
 	}
 }
