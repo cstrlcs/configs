@@ -37,4 +37,4 @@ echo '{ "extends": ["@cstrlcs/configs/biome"] }' > biome.json
 echo '{ "extends": "@cstrlcs/configs/tsconfig", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"] }' > tsconfig.json
 echo -e "* text=auto\n*.* text eol=lf" > .gitattributes
 
-bunx biome check package.json biome.json tsconfig.json --apply-unsafe
+bunx biome check package.json biome.json tsconfig.json --write --unsafe
