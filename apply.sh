@@ -30,11 +30,20 @@ if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
+echo "Installing dependencies..."
 bun add -D @cstrlcs/configs @biomejs/biome typescript
+
+echo "Updating package.json..."
 jq '.scripts |= . + { "lint": "biome check .", "lint:fix": "biome check . --apply-unsafe" }' package.json > package.json.temp && mv package.json.temp package.json
 
+echo "Creating biome config..."
 echo '{ "extends": ["@cstrlcs/configs/biome"] }' > biome.json
+
+echo "Creating tsconfig..."
 echo '{ "extends": "@cstrlcs/configs/tsconfig", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"] }' > tsconfig.json
+
+echo "Creating .gitattributes..."
 echo -e "* text=auto\n*.* text eol=lf" > .gitattributes
 
+echo "Running biome..."
 bunx biome check package.json biome.json tsconfig.json --write --unsafe
