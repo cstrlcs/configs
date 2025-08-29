@@ -2,7 +2,8 @@
 	"name": "@cstrlcs/configs",
 	"type": "module",
 	"description": "Strict configurations for Biome and TypeScript.",
-	"version": "2.1.0",
+	"keywords": ["tsconfig", "biome", "typescript", "configs"],
+	"version": "3.0.5",
 	"main": "apply.sh",
 	"bin": {
 		"cstrlcs-configs": "./apply.sh"
@@ -12,18 +13,9 @@
 	"scripts": {
 		"check": "biome check ."
 	},
-	"files": ["tsconfig.json", "biome.json", "apply.sh"],
-	"exports": {
-		"./biome": "./biome.json",
-		"./tsconfig": "./tsconfig.json"
-	},
+	"files": ["biome", "tsconfig", "apply.sh"],
 	"peerDependencies": {
-		"@biomejs/biome": "2.2.0",
+		"@biomejs/biome": "2.2.2",
 		"typescript": "5.9.2"
-	},
-	"dependencies": {
-		"@types/react": "^19.1.10",
-		"ink": "^6.2.0",
-		"react": "^19.1.1"
 	}
 }
