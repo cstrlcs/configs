@@ -1,10 +1,31 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
-	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
+		"verbatimModuleSyntax": true,
+		"target": "ESNext",
+		"strict": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"noUnusedParameters": true,
+		"noUnusedLocals": true,
+		"noUncheckedIndexedAccess": true,
+		"noPropertyAccessFromIndexSignature": true,
+		"noImplicitReturns": true,
+		"noImplicitOverride": true,
+		"noFallthroughCasesInSwitch": true,
+		"noEmit": true,
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"isolatedModules": true,
+		"forceConsistentCasingInFileNames": true,
+		"exactOptionalPropertyTypes": true,
+		"allowUnusedLabels": false,
+		"allowUnreachableCode": false,
+		"allowJs": false,
+		"allowImportingTsExtensions": true,
 		"jsx": "react-native",
 		"lib": ["DOM", "ESNext"],
-		"module": "preserve",
+		"module": "ESNext",
 		"types": ["react-native"],
 		"customConditions": ["react-native"],
 
@@ -19,11 +40,5 @@
 		"metro.config.js",
 		"jest.config.js"
 	],
-	"include": [
-		"**/*.ts",
-		"**/*.tsx",
-		".expo/types/**/*.ts",
-		"expo-env.d.ts",
-		"nativewind-env.d.ts"
-	]
+	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

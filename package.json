@@ -3,7 +3,7 @@
 	"type": "module",
 	"description": "Strict configurations for Biome and TypeScript.",
 	"keywords": ["tsconfig", "biome", "typescript", "configs"],
-	"version": "3.0.5",
+	"version": "3.0.6",
 	"main": "apply.sh",
 	"bin": {
 		"cstrlcs-configs": "./apply.sh"
