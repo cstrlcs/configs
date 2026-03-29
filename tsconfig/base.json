@@ -1,21 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    "lib": ["ESNext"],
     "target": "ESNext",
-    "jsx": "react-native",
-    "lib": ["DOM", "ESNext"],
+    "module": "Preserve",
     "moduleDetection": "force",
-    "baseUrl": ".",
-    "customConditions": ["react-native"],
-    "module": "ESNext",
     "moduleResolution": "bundler",
-    "paths": {
-      "@/*": ["./*"]
-    },
-    "resolveJsonModule": true,
-    "types": ["react-native"],
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "allowJs": false,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "erasableSyntaxOnly": true,
+    "noEmit": true,
     "strict": true,
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
@@ -27,17 +24,7 @@
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noEmit": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
     "skipLibCheck": true
-  },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
-  "exclude": [
-    "node_modules",
-    "babel.config.js",
-    "metro.config.js",
-    "jest.config.js"
-  ]
+  }
 }
