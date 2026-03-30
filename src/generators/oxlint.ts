@@ -120,7 +120,7 @@ await Promise.all(
     };
 
     await write(
-      `oxlint/${preset}.ts`,
+      `oxlint/${preset}.js`,
       `import { defineConfig } from "oxlint";
       
 export default defineConfig(${JSON.stringify(config, null, 2)});
