@@ -20,6 +20,7 @@ create_config() {
     echo "Creating ${tool} config..."
     cat > "${tool}.config.ts" <<TSEOF
 import { defineConfig } from "${tool}";
+
 import config from "@cstrlcs/configs/${tool}/base.ts";
 
 export default defineConfig(config);
