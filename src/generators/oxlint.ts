@@ -119,13 +119,23 @@ await Promise.all(
       rules: buildRules(scopes),
     };
 
-    await write(
-      `oxlint/${preset}.js`,
-      `import { defineConfig } from "oxlint";
-      
+    await Promise.all([
+      write(
+        `oxlint/${preset}.js`,
+        `import { defineConfig } from "oxlint";
+
 export default defineConfig(${JSON.stringify(config, null, 2)});
 `,
-    );
+      ),
+      write(
+        `oxlint/${preset}.d.ts`,
+        `import type { OxlintConfig } from "oxlint";
+
+declare const config: OxlintConfig;
+export default config;
+`,
+      ),
+    ]);
   }),
 );
 
