@@ -21,7 +21,7 @@ create_config() {
     cat > "${tool}.config.ts" <<TSEOF
 import { defineConfig } from "${tool}";
 
-import config from "@cstrlcs/configs/${tool}/base.ts";
+import config from "@cstrlcs/configs/${tool}/base.js";
 
 export default defineConfig(config);
 TSEOF
