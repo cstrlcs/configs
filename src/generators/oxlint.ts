@@ -43,6 +43,15 @@ const DISABLED: string[] = [
   "unicorn/prefer-ternary",
   "eslint/max-params",
   "eslint/no-warning-comments",
+  "eslint/one-var",
+  "eslint/no-underscore-dangle",
+  "eslint/require-unicode-regexp",
+  "vitest/no-hooks",
+  "vitest/prefer-called-exactly-once-with",
+  "react/rule-suppression",
+  "react/todo",
+  "react/no-set-state",
+  "vue/require-default-prop",
 
   // Temporarily disabled rules that require manual review
   "eslint/no-use-before-define",
@@ -56,6 +65,7 @@ const DISABLED: string[] = [
   "unicorn/prefer-module",
   "typescript/no-var-requires",
   "typescript/no-require-imports",
+  "typescript/prefer-readonly-parameter-types",
 ];
 
 const OVERRIDES: Record<string, (string | Record<string, unknown>)[]> = {
@@ -70,6 +80,11 @@ const OVERRIDES: Record<string, (string | Record<string, unknown>)[]> = {
       },
     },
   ],
+  "typescript/parameter-properties": ["error", { prefer: "parameter-property" }],
+};
+
+const PRESET_OVERRIDES: Record<string, { files: string[]; rules: Record<string, string> }[]> = {
+  vue: [{ files: ["**/*.vue"], rules: { "import/no-default-export": "off" } }],
 };
 
 const BASE_PLUGINS = [
@@ -115,8 +130,10 @@ await $`mkdir -p oxlint`;
 
 await Promise.all(
   Object.entries(PRESETS).map(async ([preset, scopes]: readonly [string, readonly string[]]) => {
+    const overrides = PRESET_OVERRIDES[preset];
     const config = {
       rules: buildRules(scopes),
+      ...(overrides ? { overrides } : {}),
     };
 
     await Promise.all([

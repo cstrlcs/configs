@@ -47,7 +47,7 @@ bun add -D @cstrlcs/configs oxlint oxlint-tsgolint oxfmt
 
 ```ts
 import { defineConfig } from "oxlint";
-import config from "@cstrlcs/configs/oxlint/base.ts";
+import config from "@cstrlcs/configs/oxlint/base.js";
 
 export default defineConfig(config);
 ```
@@ -56,7 +56,7 @@ export default defineConfig(config);
 
 ```ts
 import { defineConfig } from "oxfmt";
-import config from "@cstrlcs/configs/oxfmt/base.ts";
+import config from "@cstrlcs/configs/oxfmt/base.js";
 
 export default defineConfig(config);
 ```

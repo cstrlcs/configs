@@ -8,6 +8,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    "noUncheckedSideEffectImports": true,
     "allowJs": true,
     "checkJs": true,
     "verbatimModuleSyntax": true,
