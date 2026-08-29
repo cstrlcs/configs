@@ -17,7 +17,7 @@
     "url": "git+https://github.com/cstrlcs/configs.git"
   },
   "bin": {
-    "cstrlcs-configs": "./main.sh"
+    "cstrlcs-configs": "main.sh"
   },
   "files": [
     ".vscode",
