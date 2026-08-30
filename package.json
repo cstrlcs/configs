@@ -8,7 +8,8 @@
     "oxfmt",
     "oxlint",
     "tsconfig",
-    "typescript"
+    "typescript",
+    "vite"
   ],
   "license": "MIT",
   "author": "Lucas Castro (https://github.com/cstrlcs/)",
@@ -35,8 +36,8 @@
   "scripts": {
     "build": "bun ./src/generators/oxlint.ts",
     "release": "bumpp",
-    "lint": "oxlint .",
-    "lint:fix": "oxlint --fix && oxfmt"
+    "lint": "oxlint --type-aware .",
+    "lint:fix": "oxlint --type-aware --fix && oxfmt"
   },
   "devDependencies": {
     "@types/bun": "1.4.0",

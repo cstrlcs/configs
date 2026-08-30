@@ -66,6 +66,8 @@ const DISABLED: string[] = [
   "typescript/no-var-requires",
   "typescript/no-require-imports",
   "typescript/prefer-readonly-parameter-types",
+  "promise/prefer-await-to-then",
+  "promise/prefer-await-to-callbacks",
 ];
 
 const OVERRIDES: Record<string, (string | Record<string, unknown>)[]> = {
@@ -81,7 +83,20 @@ const OVERRIDES: Record<string, (string | Record<string, unknown>)[]> = {
     },
   ],
   "typescript/parameter-properties": ["error", { prefer: "parameter-property" }],
+  "import/no-unassigned-import": ["error", { allow: ["**/*.css"] }],
+  "import/no-namespace": ["error", { ignore: ["@stylexjs/stylex"] }],
 };
+
+const GLOBAL_OVERRIDES: { files: string[]; rules: Record<string, string> }[] = [
+  {
+    files: ["*.config.ts"],
+    rules: { "import/no-default-export": "off", "import/no-nodejs-modules": "off" },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: { "vitest/prefer-importing-vitest-globals": "off" },
+  },
+];
 
 const PRESET_OVERRIDES: Record<string, { files: string[]; rules: Record<string, string> }[]> = {
   vue: [{ files: ["**/*.vue"], rules: { "import/no-default-export": "off" } }],
@@ -104,6 +119,27 @@ const PRESETS: Record<string, string[]> = {
   vue: [...BASE_PLUGINS, "vue"],
   svelte: [...BASE_PLUGINS, "svelte"],
 };
+
+const VALID_OXLINT_PLUGINS = new Set([
+  "unicorn",
+  "typescript",
+  "oxc",
+  "import",
+  "jsdoc",
+  "jest",
+  "vitest",
+  "jsx-a11y",
+  "nextjs",
+  "react-perf",
+  "promise",
+  "node",
+  "vue",
+  "react",
+]);
+
+function toPlugins(scopes: readonly string[]): string[] {
+  return [...new Set(scopes.filter((scope) => VALID_OXLINT_PLUGINS.has(scope)))];
+}
 
 const output = await $`bunx oxlint --rules -f json`.text();
 const rules = z.array(RuleSchema).parse(JSON.parse(output));
@@ -130,10 +166,10 @@ await $`mkdir -p oxlint`;
 
 await Promise.all(
   Object.entries(PRESETS).map(async ([preset, scopes]: readonly [string, readonly string[]]) => {
-    const overrides = PRESET_OVERRIDES[preset];
     const config = {
+      plugins: toPlugins(scopes),
       rules: buildRules(scopes),
-      ...(overrides ? { overrides } : {}),
+      overrides: [...GLOBAL_OVERRIDES, ...(PRESET_OVERRIDES[preset] ?? [])],
     };
 
     await Promise.all([

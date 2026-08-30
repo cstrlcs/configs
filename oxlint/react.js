@@ -1,6 +1,17 @@
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
+  plugins: [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "jsdoc",
+    "promise",
+    "vitest",
+    "react",
+    "jsx-a11y",
+  ],
   rules: {
     "eslint/accessor-pairs": "error",
     "eslint/array-callback-return": "error",
@@ -187,11 +198,21 @@ export default defineConfig({
     "import/no-named-as-default": "error",
     "import/no-named-as-default-member": "error",
     "import/no-named-default": "error",
-    "import/no-namespace": "error",
+    "import/no-namespace": [
+      "error",
+      {
+        ignore: ["@stylexjs/stylex"],
+      },
+    ],
     "import/no-nodejs-modules": "error",
     "import/no-relative-parent-imports": "error",
     "import/no-self-import": "error",
-    "import/no-unassigned-import": "error",
+    "import/no-unassigned-import": [
+      "error",
+      {
+        allow: ["**/*.css"],
+      },
+    ],
     "import/no-webpack-loader-syntax": "error",
     "import/unambiguous": "error",
     "jsdoc/check-access": "error",
@@ -287,8 +308,6 @@ export default defineConfig({
     "promise/no-return-in-finally": "error",
     "promise/no-return-wrap": "error",
     "promise/param-names": "error",
-    "promise/prefer-await-to-callbacks": "error",
-    "promise/prefer-await-to-then": "error",
     "promise/prefer-catch": "error",
     "promise/spec-only": "error",
     "promise/valid-params": "error",
@@ -694,4 +713,19 @@ export default defineConfig({
     "vitest/valid-title": "error",
     "vitest/warn-todo": "error",
   },
+  overrides: [
+    {
+      files: ["*.config.ts"],
+      rules: {
+        "import/no-default-export": "off",
+        "import/no-nodejs-modules": "off",
+      },
+    },
+    {
+      files: ["**/*.test.ts", "**/*.test.tsx"],
+      rules: {
+        "vitest/prefer-importing-vitest-globals": "off",
+      },
+    },
+  ],
 });
