@@ -8,12 +8,23 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 REQUIRED_DEPS=("@cstrlcs/configs" "oxlint" "oxlint-tsgolint" "oxfmt")
-EXPECTED_LINT_SCRIPT="oxlint ."
-EXPECTED_LINT_FIX_SCRIPT="oxlint --fix && oxfmt"
-EXPECTED_TSCONFIG_EXTENDS="@cstrlcs/configs/tsconfig/base.json"
+EXPECTED_LINT_SCRIPT="oxlint --type-aware ."
+EXPECTED_LINT_FIX_SCRIPT="oxlint --type-aware --fix && oxfmt"
 EXPECTED_GITATTRIBUTES="* text=auto
 *.* text eol=lf"
 CONFIGS_VSCODE="node_modules/@cstrlcs/configs/.vscode"
+
+is_vite_project() {
+    jq -e '(.dependencies // {}) + (.devDependencies // {}) | has("vite")' package.json >/dev/null 2>&1
+}
+
+tsconfig_extends_target() {
+    if is_vite_project; then
+        echo "@cstrlcs/configs/tsconfig/vite.json"
+    else
+        echo "@cstrlcs/configs/tsconfig/base.json"
+    fi
+}
 
 create_config() {
     local tool="$1"
@@ -37,13 +48,16 @@ doctor() {
         ok=false
     fi
 
+    local expected_tsconfig_extends
+    expected_tsconfig_extends=$(tsconfig_extends_target)
+
     local tsconfig_extends
     tsconfig_extends=$(jq -r '.extends // empty' tsconfig.json 2>/dev/null)
-    
-    if [ "$tsconfig_extends" = "$EXPECTED_TSCONFIG_EXTENDS" ]; then
+
+    if [ "$tsconfig_extends" = "$expected_tsconfig_extends" ]; then
         echo "✅ tsconfig.json"
     else
-        echo "❌ tsconfig.json (expected extends: \"$EXPECTED_TSCONFIG_EXTENDS\", got: \"$tsconfig_extends\")"
+        echo "❌ tsconfig.json (expected extends: \"$expected_tsconfig_extends\", got: \"$tsconfig_extends\")"
         ok=false
     fi
 
@@ -128,12 +142,16 @@ EOF
 
     bun add -D @cstrlcs/configs oxlint oxlint-tsgolint oxfmt
 
-    jq '.scripts |= . + { "lint": "oxlint .", "lint:fix": "oxlint --fix && oxfmt" }' package.json > package.json.temp && mv package.json.temp package.json
+    jq '.scripts |= . + { "lint": "oxlint --type-aware .", "lint:fix": "oxlint --type-aware --fix && oxfmt" }' package.json > package.json.temp && mv package.json.temp package.json
 
     create_config oxlint
     create_config oxfmt
 
-    echo '{ "extends": "@cstrlcs/configs/tsconfig/base.json", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"] }' > tsconfig.json
+    if is_vite_project; then
+        echo '{ "extends": "@cstrlcs/configs/tsconfig/vite.json", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"], "exclude": ["dist", "node_modules"] }' > tsconfig.json
+    else
+        echo '{ "extends": "@cstrlcs/configs/tsconfig/base.json", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"] }' > tsconfig.json
+    fi
 
     printf '* text=auto\n*.* text eol=lf\n' > .gitattributes
 
