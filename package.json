@@ -35,7 +35,7 @@
   },
   "scripts": {
     "build": "bun ./src/generators/oxlint.ts",
-    "release": "bumpp",
+    "release": "bun run build && bumpp",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --type-aware --fix && oxfmt"
   },
