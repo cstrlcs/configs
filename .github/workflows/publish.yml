@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   publish:
@@ -43,10 +44,16 @@ jobs:
             exit 1
           fi
 
-      - name: Configure npm registry auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Install Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      # OIDC trusted publishing requires npm >= 11.5.1; Node 22's bundled npm
+      # may be older, so upgrade explicitly.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
 
       - name: Publish to npm
-        run: bun publish --access public
+        run: npm publish --provenance --access public
