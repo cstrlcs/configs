@@ -7,12 +7,49 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-REQUIRED_DEPS=("@cstrlcs/configs" "oxlint" "oxlint-tsgolint" "oxfmt")
+MINIMUM_BUN_MAJOR=1
+MINIMUM_BUN_MINOR=4
+BUN_TEST_GLOBALS_FILE="bun.d.ts"
+BUN_TYPES_REFERENCE='/// <reference types="bun" />'
+BUN_TEST_GLOBALS_REFERENCE='/// <reference types="bun-types/test-globals" />'
+REQUIRED_DEPS=("@cstrlcs/configs" "@types/bun" "oxlint" "oxlint-tsgolint" "oxfmt")
 EXPECTED_LINT_SCRIPT="oxlint --type-aware ."
 EXPECTED_LINT_FIX_SCRIPT="oxlint --type-aware --fix && oxfmt"
 EXPECTED_GITATTRIBUTES="* text=auto
 *.* text eol=lf"
 CONFIGS_VSCODE="node_modules/@cstrlcs/configs/.vscode"
+
+bun_version_supported() {
+    local version major remainder minor
+    version=$(bun --version 2>/dev/null) || return 1
+    major=${version%%.*}
+    remainder=${version#*.}
+    minor=${remainder%%.*}
+
+    case "$major" in
+        '' | *[!0-9]*) return 1 ;;
+    esac
+
+    case "$minor" in
+        '' | *[!0-9]*) return 1 ;;
+    esac
+
+    if [ "$major" -gt "$MINIMUM_BUN_MAJOR" ]; then
+        return 0
+    fi
+
+    [ "$major" -eq "$MINIMUM_BUN_MAJOR" ] && [ "$minor" -ge "$MINIMUM_BUN_MINOR" ]
+}
+
+bun_test_globals_file_valid() {
+    [ -f "$BUN_TEST_GLOBALS_FILE" ] &&
+        grep -Fqx "$BUN_TYPES_REFERENCE" "$BUN_TEST_GLOBALS_FILE" &&
+        grep -Fqx "$BUN_TEST_GLOBALS_REFERENCE" "$BUN_TEST_GLOBALS_FILE"
+}
+
+tsconfig_includes_bun_test_globals() {
+    jq -e --arg file "$BUN_TEST_GLOBALS_FILE" '(.include // []) | index($file) != null' tsconfig.json >/dev/null 2>&1
+}
 
 is_vite_project() {
     jq -e '(.dependencies // {}) + (.devDependencies // {}) | has("vite")' package.json >/dev/null 2>&1
@@ -40,6 +77,15 @@ TSEOF
 
 doctor() {
     local ok=true
+    local bun_version
+    bun_version=$(bun --version 2>/dev/null || true)
+
+    if bun_version_supported; then
+        echo "✅ Bun $bun_version"
+    else
+        echo "❌ Bun >= ${MINIMUM_BUN_MAJOR}.${MINIMUM_BUN_MINOR}.0 required (found: ${bun_version:-not installed})"
+        ok=false
+    fi
 
     if [ -f .gitattributes ] && [ "$(cat .gitattributes)" = "$EXPECTED_GITATTRIBUTES" ]; then
         echo "✅ .gitattributes"
@@ -58,6 +104,13 @@ doctor() {
         echo "✅ tsconfig.json"
     else
         echo "❌ tsconfig.json (expected extends: \"$expected_tsconfig_extends\", got: \"$tsconfig_extends\")"
+        ok=false
+    fi
+
+    if bun_test_globals_file_valid && tsconfig_includes_bun_test_globals; then
+        echo "✅ Bun test globals"
+    else
+        echo "❌ Bun test globals (expected $BUN_TEST_GLOBALS_FILE with Bun references and tsconfig inclusion)"
         ok=false
     fi
 
@@ -116,6 +169,7 @@ install() {
     cat <<EOF
 🚨 This script will add the following dependencies to your project:
   - @cstrlcs/configs
+  - @types/bun
   - oxlint
   - oxlint-tsgolint
   - oxfmt
@@ -124,6 +178,7 @@ It will also edit/overwrite the following files:
   - oxlint.config.ts
   - oxfmt.config.ts
   - tsconfig.json
+  - bun.d.ts
   - package.json
   - .gitattributes
   - .vscode/settings.json
@@ -131,6 +186,14 @@ It will also edit/overwrite the following files:
 
 Make sure you have a backup of those files before proceeding.
 EOF
+
+    local bun_version
+    bun_version=$(bun --version 2>/dev/null || true)
+
+    if ! bun_version_supported; then
+        echo "❌ Bun >= ${MINIMUM_BUN_MAJOR}.${MINIMUM_BUN_MINOR}.0 is required (found: ${bun_version:-not installed})"
+        exit 1
+    fi
 
     read -rp "Are you sure you want to continue? (y/N) " -n 1 -r REPLY
     echo
@@ -140,7 +203,7 @@ EOF
         exit 0
     fi
 
-    bun add -D @cstrlcs/configs oxlint oxlint-tsgolint oxfmt
+    bun add -D @cstrlcs/configs @types/bun oxlint oxlint-tsgolint oxfmt
 
     jq '.scripts |= . + { "lint": "oxlint --type-aware .", "lint:fix": "oxlint --type-aware --fix && oxfmt" }' package.json > package.json.temp && mv package.json.temp package.json
 
@@ -148,10 +211,12 @@ EOF
     create_config oxfmt
 
     if is_vite_project; then
-        echo '{ "extends": "@cstrlcs/configs/tsconfig/vite.json", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"], "exclude": ["dist", "node_modules"] }' > tsconfig.json
+        echo '{ "extends": "@cstrlcs/configs/tsconfig/vite.json", "compilerOptions": { "paths": { "@/*": ["./src/*"] } }, "include": ["src", "bun.d.ts"], "exclude": ["dist", "node_modules"] }' > tsconfig.json
     else
-        echo '{ "extends": "@cstrlcs/configs/tsconfig/base.json", "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }, "include": ["src"] }' > tsconfig.json
+        echo '{ "extends": "@cstrlcs/configs/tsconfig/base.json", "compilerOptions": { "paths": { "@/*": ["./src/*"] } }, "include": ["src", "bun.d.ts"] }' > tsconfig.json
     fi
+
+    printf '%s\n%s\n\nexport {};\n' "$BUN_TYPES_REFERENCE" "$BUN_TEST_GLOBALS_REFERENCE" > "$BUN_TEST_GLOBALS_FILE"
 
     printf '* text=auto\n*.* text eol=lf\n' > .gitattributes
 
@@ -159,7 +224,7 @@ EOF
     cp "$CONFIGS_VSCODE/settings.json" .vscode/settings.json
     cp "$CONFIGS_VSCODE/extensions.json" .vscode/extensions.json
 
-    bunx oxfmt && bunx oxlint --fix
+    bunx oxfmt && bunx oxlint --type-aware --fix
 }
 
 case "$1" in

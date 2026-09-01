@@ -8,7 +8,9 @@ export default defineConfig({
     ...(config.overrides ?? []),
     {
       files: ["oxlint/*.js", "oxlint/*.d.ts", "oxfmt/*.js", "oxfmt/*.d.ts"],
-      rules: { "import/no-default-export": "off" },
+      rules: {
+        "eslint/max-lines": "off",
+      },
     },
   ],
 });
