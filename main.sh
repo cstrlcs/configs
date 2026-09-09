@@ -14,9 +14,15 @@ BUN_TYPES_REFERENCE='/// <reference types="bun" />'
 BUN_TEST_GLOBALS_REFERENCE='/// <reference types="bun-types/test-globals" />'
 REQUIRED_DEPS=("@cstrlcs/configs" "@types/bun" "oxlint" "oxlint-tsgolint" "oxfmt")
 EXPECTED_LINT_SCRIPT="oxlint --type-aware ."
-EXPECTED_LINT_FIX_SCRIPT="oxlint --type-aware --fix && oxfmt"
+EXPECTED_LINT_FIX_SCRIPT="oxlint --type-aware --fix; s=\$?; oxfmt; exit \$s"
 EXPECTED_GITATTRIBUTES="* text=auto
-*.* text eol=lf"
+*.* text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary"
 CONFIGS_VSCODE="node_modules/@cstrlcs/configs/.vscode"
 
 bun_version_supported() {
@@ -205,7 +211,8 @@ EOF
 
     bun add -D @cstrlcs/configs @types/bun oxlint oxlint-tsgolint oxfmt
 
-    jq '.scripts |= . + { "lint": "oxlint --type-aware .", "lint:fix": "oxlint --type-aware --fix && oxfmt" }' package.json > package.json.temp && mv package.json.temp package.json
+    jq --arg lint "$EXPECTED_LINT_SCRIPT" --arg lintFix "$EXPECTED_LINT_FIX_SCRIPT" \
+        '.scripts |= . + { "lint": $lint, "lint:fix": $lintFix }' package.json > package.json.temp && mv package.json.temp package.json
 
     create_config oxlint
     create_config oxfmt
@@ -218,13 +225,18 @@ EOF
 
     printf '%s\n%s\n\nexport {};\n' "$BUN_TYPES_REFERENCE" "$BUN_TEST_GLOBALS_REFERENCE" > "$BUN_TEST_GLOBALS_FILE"
 
-    printf '* text=auto\n*.* text eol=lf\n' > .gitattributes
+    printf '%s\n' "$EXPECTED_GITATTRIBUTES" > .gitattributes
 
     mkdir -p .vscode
     cp "$CONFIGS_VSCODE/settings.json" .vscode/settings.json
     cp "$CONFIGS_VSCODE/extensions.json" .vscode/extensions.json
 
-    bunx oxfmt && bunx oxlint --type-aware --fix
+    local lint_status=0
+    bunx oxlint --type-aware --fix || lint_status=$?
+    bunx oxfmt
+    if [ "$lint_status" -ne 0 ]; then
+        exit "$lint_status"
+    fi
 }
 
 case "$1" in

@@ -31,7 +31,13 @@ export default defineConfig({
     "eslint/default-case": "error",
     "eslint/default-case-last": "error",
     "eslint/default-param-last": "error",
-    "eslint/eqeqeq": "error",
+    "eslint/eqeqeq": [
+      "error",
+      "always",
+      {
+        null: "ignore",
+      },
+    ],
     "eslint/for-direction": "error",
     "eslint/func-name-matching": "error",
     "eslint/func-names": "error",
@@ -97,7 +103,7 @@ export default defineConfig({
     "eslint/no-empty-function": "error",
     "eslint/no-empty-pattern": "error",
     "eslint/no-empty-static-block": "error",
-    "eslint/no-eq-null": "error",
+    "eslint/no-eq-null": "off",
     "eslint/no-eval": "error",
     "eslint/no-ex-assign": "error",
     "eslint/no-extend-native": "error",
@@ -237,7 +243,7 @@ export default defineConfig({
     "eslint/prefer-template": "error",
     "eslint/preserve-caught-error": "error",
     "eslint/radix": "error",
-    "eslint/require-await": "error",
+    "eslint/require-await": "off",
     "eslint/require-unicode-regexp": [
       "error",
       {
@@ -257,10 +263,10 @@ export default defineConfig({
     "import/consistent-type-specifier-style": "error",
     "import/default": "error",
     "import/export": "error",
-    "import/exports-last": "error",
+    "import/exports-last": "off",
     "import/extensions": "error",
     "import/first": "error",
-    "import/group-exports": "error",
+    "import/group-exports": "off",
     "import/max-dependencies": [
       "error",
       {
@@ -560,31 +566,9 @@ export default defineConfig({
     "typescript/consistent-type-exports": "error",
     "typescript/consistent-type-imports": "error",
     "typescript/dot-notation": "error",
-    "typescript/explicit-function-return-type": [
-      "error",
-      {
-        allowConciseArrowFunctionExpressionsStartingWithVoid: false,
-        allowDirectConstAssertionInArrowFunctions: false,
-        allowExpressions: false,
-        allowFunctionsWithoutTypeParameters: false,
-        allowHigherOrderFunctions: false,
-        allowIIFEs: false,
-        allowTypedFunctionExpressions: false,
-        allowedNames: [],
-      },
-    ],
+    "typescript/explicit-function-return-type": "off",
     "typescript/explicit-member-accessibility": "error",
-    "typescript/explicit-module-boundary-types": [
-      "error",
-      {
-        allowArgumentsExplicitlyTypedAsAny: false,
-        allowDirectConstAssertionInArrowFunctions: false,
-        allowHigherOrderFunctions: false,
-        allowOverloadFunctions: false,
-        allowTypedFunctionExpressions: false,
-        allowedNames: [],
-      },
-    ],
+    "typescript/explicit-module-boundary-types": "off",
     "typescript/method-signature-style": "error",
     "typescript/no-array-delete": "error",
     "typescript/no-base-to-string": [
@@ -685,7 +669,7 @@ export default defineConfig({
     "typescript/prefer-optional-chain": "error",
     "typescript/prefer-promise-reject-errors": "error",
     "typescript/prefer-readonly": "error",
-    "typescript/prefer-readonly-parameter-types": "error",
+    "typescript/prefer-readonly-parameter-types": "off",
     "typescript/prefer-reduce-type-parameter": "off",
     "typescript/prefer-regexp-exec": "error",
     "typescript/prefer-return-this-type": "error",
@@ -694,7 +678,7 @@ export default defineConfig({
     "typescript/promise-function-async": "off",
     "typescript/related-getter-setter-pairs": "error",
     "typescript/require-array-sort-compare": "error",
-    "typescript/require-await": "error",
+    "typescript/require-await": "off",
     "typescript/restrict-plus-operands": [
       "error",
       {
@@ -724,10 +708,10 @@ export default defineConfig({
       "error",
       {
         allowAny: false,
-        allowNullableBoolean: false,
+        allowNullableBoolean: true,
         allowNullableEnum: false,
         allowNullableNumber: false,
-        allowNullableObject: false,
+        allowNullableObject: true,
         allowNullableString: false,
         allowNumber: false,
         allowString: false,
@@ -815,7 +799,7 @@ export default defineConfig({
     "unicorn/no-magic-array-flat-depth": "error",
     "unicorn/no-negated-condition": "error",
     "unicorn/no-negation-in-equality-check": "error",
-    "unicorn/no-nested-ternary": "error",
+    "unicorn/no-nested-ternary": "off",
     "unicorn/no-new-array": "error",
     "unicorn/no-new-buffer": "error",
     "unicorn/no-null": "off",
@@ -1070,6 +1054,14 @@ export default defineConfig({
       files: ["**/*.d.ts", "**/*.d.cts", "**/*.d.mts"],
       rules: {
         "unicorn/require-module-specifiers": "off",
+      },
+    },
+    {
+      files: ["**/*.jsx", "**/*.tsx"],
+      rules: {
+        "eslint/max-lines-per-function": "off",
+        "import/max-dependencies": "off",
+        "eslint/complexity": "off",
       },
     },
     {

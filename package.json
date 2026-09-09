@@ -37,7 +37,7 @@
     "build": "bun ./src/generators/oxlint.ts",
     "release": "bun run build && bumpp",
     "lint": "oxlint --type-aware .",
-    "lint:fix": "oxlint --type-aware --fix && oxfmt"
+    "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s"
   },
   "devDependencies": {
     "@types/bun": "1.4.0",

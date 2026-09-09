@@ -55,6 +55,12 @@ const BUN_VI_METHOD_RESTRICTIONS = Object.fromEntries(
 );
 
 const DISABLED = new Set([
+  "typescript/explicit-function-return-type",
+  "typescript/explicit-module-boundary-types",
+  "import/group-exports",
+  "import/exports-last",
+  "eslint/require-await",
+  "typescript/require-await",
   "eslint/no-magic-numbers",
   "eslint/sort-keys",
   "import/no-default-export",
@@ -73,6 +79,7 @@ const DISABLED = new Set([
   "oxc/no-optional-chaining",
   "eslint/no-duplicate-imports",
   "eslint/no-nested-ternary",
+  "unicorn/no-nested-ternary",
   "eslint/id-length",
   "eslint/no-undef",
   "eslint/prefer-object-spread",
@@ -80,6 +87,7 @@ const DISABLED = new Set([
   "eslint/one-var",
   "eslint/no-underscore-dangle",
   "typescript/prefer-namespace-keyword",
+  "typescript/prefer-readonly-parameter-types",
   "typescript/prefer-reduce-type-parameter",
   "typescript/promise-function-async",
   "vitest/prefer-called-exactly-once-with",
@@ -97,10 +105,12 @@ const DISABLED = new Set([
   "react/no-set-state",
   "react/react-in-jsx-scope",
   "vue/require-default-prop",
+  "eslint/no-eq-null",
 ]);
 
 const OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/complexity": ["error", 8],
+  "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
   "eslint/func-style": ["error", "declaration"],
   "eslint/id-denylist": ["error", "foo", "bar", "baz", "thing", "stuff", "tmp", "doSomething"],
   "eslint/max-depth": ["error", 3],
@@ -147,30 +157,6 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
     },
   ],
   "typescript/consistent-type-assertions": ["error", { assertionStyle: "never" }],
-  "typescript/explicit-function-return-type": [
-    "error",
-    {
-      allowConciseArrowFunctionExpressionsStartingWithVoid: false,
-      allowDirectConstAssertionInArrowFunctions: false,
-      allowExpressions: false,
-      allowFunctionsWithoutTypeParameters: false,
-      allowHigherOrderFunctions: false,
-      allowIIFEs: false,
-      allowTypedFunctionExpressions: false,
-      allowedNames: [],
-    },
-  ],
-  "typescript/explicit-module-boundary-types": [
-    "error",
-    {
-      allowArgumentsExplicitlyTypedAsAny: false,
-      allowDirectConstAssertionInArrowFunctions: false,
-      allowHigherOrderFunctions: false,
-      allowOverloadFunctions: false,
-      allowTypedFunctionExpressions: false,
-      allowedNames: [],
-    },
-  ],
   "typescript/no-base-to-string": ["error", { checkUnknown: true, ignoredTypeNames: [] }],
   "typescript/no-floating-promises": [
     "error",
@@ -231,10 +217,10 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
     "error",
     {
       allowAny: false,
-      allowNullableBoolean: false,
+      allowNullableBoolean: true,
       allowNullableEnum: false,
       allowNullableNumber: false,
-      allowNullableObject: false,
+      allowNullableObject: true,
       allowNullableString: false,
       allowNumber: false,
       allowString: false,
@@ -281,6 +267,8 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
 const JAVASCRIPT_FILES = ["**/*.js", "**/*.jsx", "**/*.cjs", "**/*.mjs"];
 
 const TYPESCRIPT_FILES = ["**/*.ts", "**/*.tsx", "**/*.cts", "**/*.mts"];
+
+const JSX_FILES = ["**/*.jsx", "**/*.tsx"];
 
 const DECLARATION_FILES = ["**/*.d.ts", "**/*.d.cts", "**/*.d.mts"];
 
@@ -331,6 +319,14 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
   {
     files: DECLARATION_FILES,
     rules: { "unicorn/require-module-specifiers": "off" },
+  },
+  {
+    files: JSX_FILES,
+    rules: {
+      "eslint/max-lines-per-function": "off",
+      "import/max-dependencies": "off",
+      "eslint/complexity": "off",
+    },
   },
   {
     files: JAVASCRIPT_FILES,
