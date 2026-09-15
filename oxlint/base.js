@@ -38,7 +38,7 @@ export default defineConfig({
     "eslint/id-denylist": ["error", "foo", "bar", "baz", "thing", "stuff", "tmp", "doSomething"],
     "eslint/id-length": "off",
     "eslint/id-match": "error",
-    "eslint/init-declarations": "error",
+    "eslint/init-declarations": "off",
     "eslint/logical-assignment-operators": "error",
     "eslint/max-classes-per-file": "error",
     "eslint/max-depth": ["error", 3],
@@ -60,7 +60,7 @@ export default defineConfig({
     ],
     "eslint/max-nested-callbacks": ["error", 3],
     "eslint/max-params": ["error", 3],
-    "eslint/max-statements": ["error", 20],
+    "eslint/max-statements": ["error", 25],
     "eslint/new-cap": "error",
     "eslint/no-alert": "error",
     "eslint/no-array-constructor": "error",
@@ -72,7 +72,12 @@ export default defineConfig({
     "eslint/no-class-assign": "error",
     "eslint/no-compare-neg-zero": "error",
     "eslint/no-cond-assign": "error",
-    "eslint/no-console": "error",
+    "eslint/no-console": [
+      "error",
+      {
+        allow: ["error", "warn"],
+      },
+    ],
     "eslint/no-const-assign": "error",
     "eslint/no-constant-binary-expression": "error",
     "eslint/no-constant-condition": "error",
@@ -193,7 +198,12 @@ export default defineConfig({
     "eslint/no-useless-rename": "error",
     "eslint/no-useless-return": "error",
     "eslint/no-var": "error",
-    "eslint/no-void": "error",
+    "eslint/no-void": [
+      "error",
+      {
+        allowAsStatement: true,
+      },
+    ],
     "eslint/no-warning-comments": [
       "error",
       {
@@ -261,7 +271,7 @@ export default defineConfig({
       "error",
       {
         ignoreTypeImports: false,
-        max: 8,
+        max: 11,
       },
     ],
     "import/named": "error",
@@ -409,7 +419,7 @@ export default defineConfig({
     "typescript/class-literal-property-style": "error",
     "typescript/consistent-generic-constructors": "error",
     "typescript/consistent-indexed-object-style": "error",
-    "typescript/consistent-return": "error",
+    "typescript/consistent-return": "off",
     "typescript/consistent-type-assertions": [
       "error",
       {
@@ -450,7 +460,7 @@ export default defineConfig({
         allowForKnownSafePromises: [],
         checkThenables: true,
         ignoreIIFE: false,
-        ignoreVoid: false,
+        ignoreVoid: true,
       },
     ],
     "typescript/no-for-in-array": "error",
@@ -553,7 +563,7 @@ export default defineConfig({
         allowBoolean: false,
         allowNever: false,
         allowNullish: false,
-        allowNumber: false,
+        allowNumber: true,
         allowRegExp: false,
       },
     ],
@@ -581,7 +591,7 @@ export default defineConfig({
       },
     ],
     "typescript/triple-slash-reference": "error",
-    "typescript/unbound-method": "error",
+    "typescript/unbound-method": "off",
     "typescript/unified-signatures": "error",
     "typescript/use-unknown-in-catch-callback-variable": "error",
     "unicorn/catch-error-name": "error",
@@ -608,7 +618,12 @@ export default defineConfig({
       },
     ],
     "unicorn/import-style": "error",
-    "unicorn/max-nested-calls": "error",
+    "unicorn/max-nested-calls": [
+      "error",
+      {
+        max: 4,
+      },
+    ],
     "unicorn/new-for-builtins": "error",
     "unicorn/no-abusive-eslint-disable": "error",
     "unicorn/no-accessor-recursion": "error",

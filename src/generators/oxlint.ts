@@ -55,6 +55,7 @@ const BUN_VI_METHOD_RESTRICTIONS = Object.fromEntries(
 );
 
 const DISABLED = new Set([
+  "typescript/consistent-return",
   "typescript/explicit-function-return-type",
   "typescript/explicit-module-boundary-types",
   "import/group-exports",
@@ -106,11 +107,15 @@ const DISABLED = new Set([
   "react/react-in-jsx-scope",
   "vue/require-default-prop",
   "eslint/no-eq-null",
+  "typescript/unbound-method",
+  "eslint/init-declarations",
 ]);
 
 const OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/complexity": ["error", 8],
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
+  "eslint/no-void": ["error", { allowAsStatement: true }],
+  "eslint/no-console": ["error", { allow: ["error", "warn"] }],
   "eslint/func-style": ["error", "declaration"],
   "eslint/id-denylist": ["error", "foo", "bar", "baz", "thing", "stuff", "tmp", "doSomething"],
   "eslint/max-depth": ["error", 3],
@@ -118,7 +123,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: true }],
   "eslint/max-nested-callbacks": ["error", 3],
   "eslint/max-params": ["error", 3],
-  "eslint/max-statements": ["error", 20],
+  "eslint/max-statements": ["error", 25],
   "eslint/no-restricted-exports": [
     "error",
     { restrictedNamedExports: ["data", "result", "value", "helper", "manager"] },
@@ -140,7 +145,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
     },
   ],
   "eslint/require-unicode-regexp": ["error", { requireFlag: "v" }],
-  "import/max-dependencies": ["error", { ignoreTypeImports: false, max: 8 }],
+  "import/max-dependencies": ["error", { ignoreTypeImports: false, max: 11 }],
   "import/no-commonjs": ["error", { allowConditionalRequire: false }],
   "import/no-cycle": ["error", { ignoreTypes: false }],
   "oxc/no-barrel-file": ["error", { threshold: 0 }],
@@ -165,7 +170,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
       allowForKnownSafePromises: [],
       checkThenables: true,
       ignoreIIFE: false,
-      ignoreVoid: false,
+      ignoreVoid: true,
     },
   ],
   "typescript/only-throw-error": [
@@ -208,7 +213,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
       allowBoolean: false,
       allowNever: false,
       allowNullish: false,
-      allowNumber: false,
+      allowNumber: true,
       allowRegExp: false,
     },
   ],
@@ -234,6 +239,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
       requireDefaultForNonUnion: true,
     },
   ],
+  "unicorn/max-nested-calls": ["error", { max: 4 }],
   "unicorn/no-array-reduce": ["error", { allowSimpleOperations: false }],
   "unicorn/no-array-reverse": ["error", { allowExpressionStatement: false }],
   "unicorn/no-array-sort": ["error", { allowAfterSpread: false, allowExpressionStatement: false }],
