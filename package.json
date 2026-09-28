@@ -24,6 +24,7 @@
     ".vscode",
     "oxlint",
     "oxfmt",
+    "plugins",
     "tsconfig"
   ],
   "type": "module",
@@ -31,15 +32,21 @@
   "exports": {
     "./oxlint/*": "./oxlint/*",
     "./oxfmt/*": "./oxfmt/*",
+    "./plugins/*": "./plugins/*",
     "./tsconfig/*": "./tsconfig/*"
   },
   "scripts": {
-    "build": "bun ./src/generators/oxlint.ts",
-    "release": "bun run build && bumpp",
+    "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxlint.ts",
+    "release": "bumpp",
     "lint": "oxlint --type-aware .",
-    "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s"
+    "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s",
+    "test": "node --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "oxc-resolver": "11.24.2"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.80.0",
     "@types/bun": "1.4.0",
     "bumpp": "12.2.2",
     "typescript": "7.0.2",

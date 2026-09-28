@@ -51,10 +51,12 @@ const BUN_VI_METHOD_RESTRICTIONS = Object.fromEntries(
     "unstubAllGlobals",
     "waitFor",
     "waitUntil",
-  ].map((method): [string, string] => [method, `Bun 1.4 does not implement vi.${method}().`]),
+  ].map((method) => [method, `Bun 1.4 does not implement vi.${method}().`]),
 );
 
 const DISABLED = new Set([
+  "eslint/capitalized-comments",
+  "eslint/require-unicode-regexp",
   "typescript/consistent-return",
   "typescript/explicit-function-return-type",
   "typescript/explicit-module-boundary-types",
@@ -103,6 +105,9 @@ const DISABLED = new Set([
   "vitest/prefer-to-be-truthy",
   "vitest/prefer-todo",
   "react/jsx-no-constructed-context-values",
+  "react/forbid-component-props",
+  "react/jsx-no-literals",
+  "react/jsx-props-no-spreading",
   "react/no-set-state",
   "react/react-in-jsx-scope",
   "vue/require-default-prop",
@@ -144,7 +149,6 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
       terms: ["todo", "fixme", "xxx", "hack", "wip"],
     },
   ],
-  "eslint/require-unicode-regexp": ["error", { requireFlag: "v" }],
   "import/max-dependencies": ["error", { ignoreTypeImports: false, max: 11 }],
   "import/no-commonjs": ["error", { allowConditionalRequire: false }],
   "import/no-cycle": ["error", { ignoreTypes: false }],
@@ -260,6 +264,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
   ],
   "vitest/prefer-snapshot-hint": ["error", "always"],
   "vitest/require-top-level-describe": ["error", { maxNumberOfTopLevelDescribes: 1 }],
+  "react/jsx-max-depth": ["error", { max: 4 }],
   "react/jsx-filename-extension": [
     "error",
     { allow: "as-needed", extensions: ["jsx", "tsx"], ignoreFilesWithoutCode: false },
@@ -277,6 +282,10 @@ const TYPESCRIPT_FILES = ["**/*.ts", "**/*.tsx", "**/*.cts", "**/*.mts"];
 const JSX_FILES = ["**/*.jsx", "**/*.tsx"];
 
 const DECLARATION_FILES = ["**/*.d.ts", "**/*.d.cts", "**/*.d.mts"];
+
+const COMMONJS_CONFIG_FILES = ["**/*.config.js", "**/*.config.cjs", "**/.*rc.js", "**/.*rc.cjs"];
+
+const TEST_SUPPORT_FILES = ["**/tests/**", "**/__tests__/**", "**/test-utils.*"];
 
 const TEST_FILES = [
   "**/*.test.js",
@@ -339,6 +348,28 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
     rules: { "eslint/no-undef": "error", "jsdoc/require-param-type": "error" },
   },
   {
+    files: COMMONJS_CONFIG_FILES,
+    env: { commonjs: true, node: true },
+    rules: {
+      "eslint/no-implicit-globals": "off",
+      "eslint/no-undef": "off",
+      "import/no-commonjs": "off",
+      "import/no-nodejs-modules": "off",
+      "import/unambiguous": "off",
+      "typescript/no-require-imports": "off",
+      "typescript/no-unsafe-argument": "off",
+      "typescript/no-unsafe-assignment": "off",
+      "typescript/no-unsafe-call": "off",
+      "typescript/no-unsafe-member-access": "off",
+      "typescript/no-var-requires": "off",
+      "unicorn/prefer-module": "off",
+    },
+  },
+  {
+    files: TEST_SUPPORT_FILES,
+    rules: { "react/only-export-components": "off" },
+  },
+  {
     files: TEST_FILES,
     env: { vitest: true },
     rules: {
@@ -359,6 +390,15 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
 ];
 
 const PRESET_OVERRIDES: Record<string, ConfigOverride[]> = {};
+
+const PRESET_RULES: Record<string, Record<string, RuleConfiguration>> = {};
+
+const CSTRLCS_PLUGIN = "@cstrlcs/configs/plugins/cstrlcs.js";
+
+const CSTRLCS_RULES: Record<string, RuleConfiguration> = {
+  "cstrlcs/no-comments": "error",
+  "cstrlcs/no-explicit-return-type": "error",
+};
 
 const BASE_PLUGINS = [
   "eslint",
@@ -397,61 +437,86 @@ const VALID_OXLINT_PLUGINS = new Set([
 const output = await $`bunx oxlint --rules -f json`.text();
 const rules = z.array(RuleSchema).parse(JSON.parse(output));
 
-function toPlugins(scopes: readonly string[]): string[] {
-  return [...new Set(scopes.filter((scope): boolean => VALID_OXLINT_PLUGINS.has(scope)))];
+function toPlugins(scopes: readonly string[]) {
+  return [...new Set(scopes.filter((scope) => VALID_OXLINT_PLUGINS.has(scope)))];
 }
 
-function normalizeScope(scope: string): string {
+function normalizeScope(scope: string) {
   return scope.replaceAll("_", "-");
 }
 
-function buildRules(scopes: readonly string[]): Record<string, RuleConfiguration> {
+function buildRules(preset: string, scopes: readonly string[]) {
+  const presetRules = PRESET_RULES[preset] ?? {};
+
   return Object.fromEntries(
     rules
-      .filter((rule): boolean => scopes.includes(normalizeScope(rule.scope)))
-      .map((rule): [string, RuleConfiguration] => {
+      .filter((rule) => scopes.includes(normalizeScope(rule.scope)))
+      .map((rule) => {
         const key = `${normalizeScope(rule.scope)}/${rule.value}`;
-        return [key, DISABLED.has(key) ? "off" : (OVERRIDES[key] ?? "error")];
+        return [key, DISABLED.has(key) ? "off" : (presetRules[key] ?? OVERRIDES[key] ?? "error")];
       }),
   );
+}
+
+function isTestRule(key: string) {
+  return key.startsWith("vitest/");
+}
+
+function splitTestRules(allRules: Record<string, RuleConfiguration>) {
+  const entries = Object.entries(allRules);
+
+  return {
+    baseRules: Object.fromEntries(
+      entries.map(([key, value]) => [key, isTestRule(key) ? "off" : value]),
+    ),
+    testRules: Object.fromEntries(entries.filter(([key]) => isTestRule(key))),
+  };
+}
+
+function buildOverrides(preset: string, testRules: Record<string, RuleConfiguration>) {
+  return [
+    ...GLOBAL_OVERRIDES,
+    { files: TEST_FILES, rules: testRules },
+    ...(PRESET_OVERRIDES[preset] ?? []),
+  ];
 }
 
 await $`mkdir -p oxlint`;
 
 await Promise.all(
-  Object.entries(PRESETS).map(
-    async ([preset, scopes]: readonly [string, readonly string[]]): Promise<void> => {
-      const config = {
-        options: {
-          denyWarnings: true,
-          reportUnusedDisableDirectives: "error",
-          typeAware: true,
-          typeCheck: true,
-        },
-        plugins: toPlugins(scopes),
-        rules: buildRules(scopes),
-        overrides: [...GLOBAL_OVERRIDES, ...(PRESET_OVERRIDES[preset] ?? [])],
-      };
+  Object.entries(PRESETS).map(async ([preset, scopes]: readonly [string, readonly string[]]) => {
+    const { baseRules, testRules } = splitTestRules(buildRules(preset, scopes));
+    const config = {
+      options: {
+        denyWarnings: true,
+        reportUnusedDisableDirectives: "error",
+        typeAware: true,
+        typeCheck: true,
+      },
+      plugins: toPlugins(scopes),
+      jsPlugins: [CSTRLCS_PLUGIN],
+      rules: { ...baseRules, ...CSTRLCS_RULES },
+      overrides: buildOverrides(preset, testRules),
+    };
 
-      await Promise.all([
-        write(
-          `oxlint/${preset}.js`,
-          `import { defineConfig } from "oxlint";
+    await Promise.all([
+      write(
+        `oxlint/${preset}.js`,
+        `import { defineConfig } from "oxlint";
 
 export default defineConfig(${JSON.stringify(config, null, 2)});
 `,
-        ),
-        write(
-          `oxlint/${preset}.d.ts`,
-          `import type { OxlintConfig } from "oxlint";
+      ),
+      write(
+        `oxlint/${preset}.d.ts`,
+        `import type { OxlintConfig } from "oxlint";
 
 declare const config: OxlintConfig;
 export default config;
 `,
-        ),
-      ]);
-    },
-  ),
+      ),
+    ]);
+  }),
 );
 
 await $`bun run lint:fix`;
