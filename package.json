@@ -37,7 +37,7 @@
   },
   "scripts": {
     "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxlint.ts",
-    "release": "bumpp",
+    "release": "publi.sh",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s",
     "test": "node --test \"src/**/*.test.ts\""
@@ -48,7 +48,6 @@
   "devDependencies": {
     "@oxlint/plugins": "1.80.0",
     "@types/bun": "1.4.0",
-    "bumpp": "12.2.2",
     "typescript": "7.0.2",
     "zod": "4.5.1"
   },
