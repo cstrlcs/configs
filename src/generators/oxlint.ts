@@ -3,6 +3,7 @@ import { z } from "zod";
 
 type RuleOption = boolean | number | string | Record<string, unknown>;
 type RuleConfiguration = string | [string, ...RuleOption[]];
+
 interface ConfigOverride {
   files: string[];
   env?: Record<string, boolean>;
@@ -398,6 +399,7 @@ const CSTRLCS_PLUGIN = "@cstrlcs/configs/plugins/cstrlcs.js";
 const CSTRLCS_RULES: Record<string, RuleConfiguration> = {
   "cstrlcs/no-comments": "error",
   "cstrlcs/no-explicit-return-type": "error",
+  "cstrlcs/padding-between-statements": "error",
 };
 
 const BASE_PLUGINS = [
@@ -453,6 +455,7 @@ function buildRules(preset: string, scopes: readonly string[]) {
       .filter((rule) => scopes.includes(normalizeScope(rule.scope)))
       .map((rule) => {
         const key = `${normalizeScope(rule.scope)}/${rule.value}`;
+
         return [key, DISABLED.has(key) ? "off" : (presetRules[key] ?? OVERRIDES[key] ?? "error")];
       }),
   );
@@ -486,6 +489,7 @@ await $`mkdir -p oxlint`;
 await Promise.all(
   Object.entries(PRESETS).map(async ([preset, scopes]: readonly [string, readonly string[]]) => {
     const { baseRules, testRules } = splitTestRules(buildRules(preset, scopes));
+
     const config = {
       options: {
         denyWarnings: true,

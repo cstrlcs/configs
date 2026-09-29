@@ -984,6 +984,7 @@ export default defineConfig({
     "vitest/warn-todo": "off",
     "cstrlcs/no-comments": "error",
     "cstrlcs/no-explicit-return-type": "error",
+    "cstrlcs/padding-between-statements": "error",
   },
   overrides: [
     {

@@ -18,6 +18,7 @@ interface ActiveRule {
 function activeRulesFor(rules: readonly DependencyRule[], file: string) {
   return rules.flatMap((rule) => {
     const groups = matchFrom(rule, file);
+
     return groups === undefined ? [] : [{ groups, rule }];
   });
 }
@@ -40,6 +41,7 @@ export const forbiddenDependencies = defineRule({
       for (const { rule, groups } of activeRules) {
         if (matchTo(rule, groups, target)) {
           const comment = rule.comment === undefined ? "" : ` ${rule.comment}`;
+
           context.report({
             data: { comment, name: rule.name, to: target },
             messageId: "forbidden",
@@ -52,6 +54,7 @@ export const forbiddenDependencies = defineRule({
     return {
       before() {
         const rules = parseDependencyRules(context.options);
+
         activeRules = activeRulesFor(rules, toRelativePath(context.cwd, context.filename));
 
         return activeRules.length > 0;

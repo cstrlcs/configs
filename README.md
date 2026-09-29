@@ -160,7 +160,8 @@ rules described below.
 ## Plugins
 
 `@cstrlcs/configs/plugins/cstrlcs.js` is an Oxlint [JS plugin](https://oxc.rs/docs/guide/usage/linter/js-plugins.html).
-Every preset loads it and enables `cstrlcs/no-comments` and `cstrlcs/no-explicit-return-type`;
+Every preset loads it and enables `cstrlcs/no-comments`, `cstrlcs/no-explicit-return-type` and
+`cstrlcs/padding-between-statements`;
 `cstrlcs/forbidden-dependencies` needs project-specific options, so it stays opt-in. A rule is
 only added here when no native Oxlint rule covers it.
 
@@ -212,8 +213,8 @@ Severity applies to the whole Oxlint rule, not to each entry.
 
 ### `cstrlcs/no-comments`
 
-Forbids comments so code explains itself through names and structure. JSDoc (`/** */`),
-license headers (`/*! */`), shebangs, `oxlint-`/`eslint-` disable and enable directives,
+Forbids comments, including JSDoc (`/** */`), so code explains itself through names and
+structure. License headers (`/*! */`), shebangs, `oxlint-`/`eslint-` disable and enable directives,
 `@ts-` directives, and triple-slash references are allowed. The rule has no options; silence a
 required magic comment with a disable directive. Presets turn off `eslint/capitalized-comments`
 in its favor.
@@ -226,6 +227,29 @@ them. Type predicates (`x is T`, `asserts x`) and functions without a body (over
 than a fix, because inference can differ from the annotation (for example `[]` infers
 `never[]`); apply it with `oxlint --fix-suggestions`. Recursive functions that TypeScript
 cannot infer need a disable directive.
+
+### `cstrlcs/padding-between-statements`
+
+Requires a blank line between consecutive statements in the same block, except between
+single-line statements of the same kind, such as a run of `const` declarations or of calls.
+Multi-line statements, statements with a body (`if`, `for`, `switch`, `try`, functions,
+classes and similar, even when written on one line) and statements of different kinds (so
+`return`, `break` and `throw` after anything else) are always separated. Imports stay grouped
+even when they span several lines. The rule has no options and auto-fixes by inserting the
+missing blank line.
+
+```ts
+const x = 42;
+
+if (x === 42) {
+  run();
+}
+
+const y = 43;
+const z = 44;
+
+return x;
+```
 
 ### Adding a plugin or rule
 

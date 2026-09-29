@@ -7,6 +7,7 @@ await $`rm -rf plugins`;
 await Promise.all(
   entrypoints.map(async (entrypoint) => {
     const name = entrypoint.split("/").at(-2) ?? "index";
+
     const result = await build({
       entrypoints: [entrypoint],
       external: ["oxc-resolver"],

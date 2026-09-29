@@ -12,7 +12,7 @@ function isAllowed(comment: Comment) {
     return true;
   }
 
-  if (comment.type === "Block" && /^[*!]/v.test(comment.value)) {
+  if (comment.type === "Block" && comment.value.startsWith("!")) {
     return true;
   }
 

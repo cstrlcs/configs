@@ -223,7 +223,7 @@ function isAllowed(comment) {
   if (comment.type === "Shebang") {
     return true;
   }
-  if (comment.type === "Block" && /^[*!]/v.test(comment.value)) {
+  if (comment.type === "Block" && comment.value.startsWith("!")) {
     return true;
   }
   const value = comment.value.trim();
@@ -286,6 +286,118 @@ var noExplicitReturnType = defineRule({
   },
 });
 
+// src/plugins/cstrlcs/padding-between-statements/rule.ts
+function groupOf(statement) {
+  if (statement.type === "ExpressionStatement" && "directive" in statement) {
+    return "Directive";
+  }
+  return statement.type;
+}
+var STATEMENTS_WITH_BODY = new Set([
+  "BlockStatement",
+  "ClassDeclaration",
+  "DoWhileStatement",
+  "ForInStatement",
+  "ForOfStatement",
+  "ForStatement",
+  "FunctionDeclaration",
+  "IfStatement",
+  "LabeledStatement",
+  "SwitchStatement",
+  "TSEnumDeclaration",
+  "TSInterfaceDeclaration",
+  "TSModuleDeclaration",
+  "TryStatement",
+  "WhileStatement",
+  "WithStatement",
+]);
+function hasBody(statement) {
+  if (
+    (statement.type === "ExportNamedDeclaration" ||
+      statement.type === "ExportDefaultDeclaration") &&
+    statement.declaration !== null
+  ) {
+    return STATEMENTS_WITH_BODY.has(statement.declaration.type);
+  }
+  return STATEMENTS_WITH_BODY.has(statement.type);
+}
+function isSingleLine(statement) {
+  return statement.loc.start.line === statement.loc.end.line;
+}
+function canBeGrouped(previous, next) {
+  if (groupOf(previous) !== groupOf(next) || hasBody(previous) || hasBody(next)) {
+    return false;
+  }
+  return next.type === "ImportDeclaration" || (isSingleLine(previous) && isSingleLine(next));
+}
+function hasBlankLineBetween(context, previous, next) {
+  return context.sourceCode.lines
+    .slice(previous.loc.end.line, next.loc.start.line - 1)
+    .some((line) => line.trim() === "");
+}
+function report(context, previous, next) {
+  if (previous.loc.end.line === next.loc.start.line) {
+    context.report({ messageId: "missing", node: next });
+    return;
+  }
+  const startOfFollowingLine = context.sourceCode.lineStartIndices[previous.loc.end.line] ?? 0;
+  context.report({
+    fix: (fixer) =>
+      fixer.insertTextBeforeRange(
+        [startOfFollowingLine, startOfFollowingLine],
+        `
+`,
+      ),
+    messageId: "missing",
+    node: next,
+  });
+}
+function check(context, statements) {
+  for (const [index, next] of statements.entries()) {
+    const previous = statements[index - 1];
+    if (
+      previous !== undefined &&
+      !canBeGrouped(previous, next) &&
+      !hasBlankLineBetween(context, previous, next)
+    ) {
+      report(context, previous, next);
+    }
+  }
+}
+var paddingBetweenStatements = defineRule({
+  meta: {
+    docs: {
+      description:
+        "Require a blank line between statements, except between single-line statements of the same kind.",
+    },
+    fixable: "whitespace",
+    messages: {
+      missing: "Expected a blank line before this statement.",
+    },
+    schema: [],
+    type: "layout",
+  },
+  createOnce(context) {
+    return {
+      BlockStatement(node) {
+        check(context, node.body);
+      },
+      Program(node) {
+        check(context, node.body);
+      },
+      StaticBlock(node) {
+        check(context, node.body);
+      },
+      SwitchCase(node) {
+        check(context, node.consequent);
+      },
+      TSModuleBlock(node) {
+        check(context, node.body);
+      },
+    };
+  },
+});
+
 // src/plugins/cstrlcs/index.ts
 var cstrlcs_default = definePlugin({
   meta: { name: "cstrlcs" },
@@ -293,6 +405,7 @@ var cstrlcs_default = definePlugin({
     "forbidden-dependencies": forbiddenDependencies,
     "no-comments": noComments,
     "no-explicit-return-type": noExplicitReturnType,
+    "padding-between-statements": paddingBetweenStatements,
   },
 });
 export { cstrlcs_default as default };

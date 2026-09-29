@@ -3,6 +3,7 @@ import { definePlugin } from "@oxlint/plugins";
 import { forbiddenDependencies } from "./forbidden-dependencies/rule.ts";
 import { noComments } from "./no-comments/rule.ts";
 import { noExplicitReturnType } from "./no-explicit-return-type/rule.ts";
+import { paddingBetweenStatements } from "./padding-between-statements/rule.ts";
 
 export default definePlugin({
   meta: { name: "cstrlcs" },
@@ -10,5 +11,6 @@ export default definePlugin({
     "forbidden-dependencies": forbiddenDependencies,
     "no-comments": noComments,
     "no-explicit-return-type": noExplicitReturnType,
+    "padding-between-statements": paddingBetweenStatements,
   },
 });
