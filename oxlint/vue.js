@@ -151,7 +151,17 @@ export default defineConfig({
       },
     ],
     "eslint/no-restricted-globals": "error",
-    "eslint/no-restricted-imports": "error",
+    "eslint/no-restricted-imports": [
+      "error",
+      {
+        patterns: [
+          {
+            group: ["./**"],
+            message: "Use a path alias instead of a relative import.",
+          },
+        ],
+      },
+    ],
     "eslint/no-restricted-properties": "error",
     "eslint/no-return-assign": "error",
     "eslint/no-script-url": "error",
@@ -988,6 +998,12 @@ export default defineConfig({
               {
                 message: "Use Bun test globals so Oxlint can apply the complete Vitest ruleset.",
                 name: "bun:test",
+              },
+            ],
+            patterns: [
+              {
+                group: ["./**"],
+                message: "Use a path alias instead of a relative import.",
               },
             ],
           },

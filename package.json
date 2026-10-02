@@ -40,7 +40,7 @@
     "release": "bun run build && publi.sh",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s",
-    "test": "node --test \"src/**/*.test.ts\""
+    "test": "vitest run"
   },
   "dependencies": {
     "oxc-resolver": "11.24.2"
@@ -49,6 +49,7 @@
     "@oxlint/plugins": "1.80.0",
     "@types/bun": "1.4.0",
     "typescript": "7.0.2",
+    "vitest": "5.0.2",
     "zod": "4.5.1"
   },
   "peerDependencies": {

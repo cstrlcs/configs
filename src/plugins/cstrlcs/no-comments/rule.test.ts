@@ -1,15 +1,6 @@
-import { describe, it } from "node:test";
 import { RuleTester } from "oxlint/plugins-dev";
 
 import { noComments } from "./rule.ts";
-
-RuleTester.describe = (text, method) => {
-  void describe(text, method);
-};
-
-RuleTester.it = (text, method) => {
-  void it(text, method);
-};
 
 new RuleTester().run("no-comments", noComments, {
   invalid: [

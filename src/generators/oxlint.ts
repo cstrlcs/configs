@@ -55,6 +55,10 @@ const BUN_VI_METHOD_RESTRICTIONS = Object.fromEntries(
   ].map((method) => [method, `Bun 1.4 does not implement vi.${method}().`]),
 );
 
+const RELATIVE_IMPORT_PATTERNS = [
+  { group: ["./**"], message: "Use a path alias instead of a relative import." },
+];
+
 const DISABLED = new Set([
   "eslint/capitalized-comments",
   "eslint/require-unicode-regexp",
@@ -130,6 +134,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/max-nested-callbacks": ["error", 3],
   "eslint/max-params": ["error", 3],
   "eslint/max-statements": ["error", 25],
+  "eslint/no-restricted-imports": ["error", { patterns: RELATIVE_IMPORT_PATTERNS }],
   "eslint/no-restricted-exports": [
     "error",
     { restrictedNamedExports: ["data", "result", "value", "helper", "manager"] },
@@ -383,6 +388,7 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
               name: "bun:test",
             },
           ],
+          patterns: RELATIVE_IMPORT_PATTERNS,
         },
       ],
       "import/unambiguous": "off",

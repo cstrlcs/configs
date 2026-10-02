@@ -17,9 +17,13 @@ export default defineConfig({
     {
       files: ["src/plugins/**/*.test.ts"],
       rules: {
-        "import/no-nodejs-modules": "off",
-        "vitest/no-import-node-test": "off",
         "vitest/require-hook": "off",
+      },
+    },
+    {
+      files: ["**/*.ts"],
+      rules: {
+        "eslint/no-restricted-imports": "off",
       },
     },
   ],

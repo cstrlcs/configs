@@ -1,15 +1,6 @@
-import { describe, it } from "node:test";
 import { RuleTester } from "oxlint/plugins-dev";
 
 import { paddingBetweenStatements } from "./rule.ts";
-
-RuleTester.describe = (text, method) => {
-  void describe(text, method);
-};
-
-RuleTester.it = (text, method) => {
-  void it(text, method);
-};
 
 new RuleTester().run("padding-between-statements", paddingBetweenStatements, {
   invalid: [
