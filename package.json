@@ -26,8 +26,6 @@
     "oxfmt",
     "plugins",
     "src/cli",
-    "!src/cli/**/*.test.ts",
-    "!src/cli/test-fixture.ts",
     "tsconfig"
   ],
   "type": "module",
@@ -44,7 +42,7 @@
     "format:check": "oxfmt --check",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s",
-    "test": "vitest run && bun test src/cli"
+    "test": "vitest run"
   },
   "dependencies": {
     "oxc-resolver": "11.24.2"

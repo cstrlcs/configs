@@ -15,12 +15,6 @@ export default defineConfig({
       },
     },
     {
-      files: ["src/cli/**/*.test.ts"],
-      rules: {
-        "eslint/max-lines-per-function": "off",
-      },
-    },
-    {
       files: ["src/plugins/**/*.test.ts"],
       rules: {
         "vitest/require-hook": "off",
