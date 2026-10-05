@@ -9,9 +9,15 @@ export default defineConfig({
   overrides: [
     ...(config.overrides ?? []),
     {
-      files: ["oxlint/*.js", "oxlint/*.d.ts", "oxfmt/*.js", "oxfmt/*.d.ts"],
+      files: ["oxlint/*.js", "oxfmt/*.js", "src/generators/oxlint-rules.ts"],
       rules: {
         "eslint/max-lines": "off",
+      },
+    },
+    {
+      files: ["src/cli/**/*.test.ts"],
+      rules: {
+        "eslint/max-lines-per-function": "off",
       },
     },
     {

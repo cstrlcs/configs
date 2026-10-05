@@ -18,17 +18,19 @@
     "url": "git+https://github.com/cstrlcs/configs.git"
   },
   "bin": {
-    "cstrlcs-configs": "main.sh"
+    "cstrlcs-configs": "src/cli/main.ts"
   },
   "files": [
     ".vscode",
     "oxlint",
     "oxfmt",
     "plugins",
+    "src/cli",
+    "!src/cli/**/*.test.ts",
+    "!src/cli/test-fixture.ts",
     "tsconfig"
   ],
   "type": "module",
-  "main": "main.sh",
   "exports": {
     "./oxlint/*": "./oxlint/*",
     "./oxfmt/*": "./oxfmt/*",
@@ -36,11 +38,13 @@
     "./tsconfig/*": "./tsconfig/*"
   },
   "scripts": {
-    "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxlint.ts",
-    "release": "bun run build && publi.sh",
+    "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxfmt.ts && bun ./src/generators/oxlint.ts",
+    "release": "publi.sh",
+    "check": "bun run lint && bun run format:check && tsc --noEmit && bun run test",
+    "format:check": "oxfmt --check",
     "lint": "oxlint --type-aware .",
     "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s",
-    "test": "vitest run"
+    "test": "vitest run && bun test src/cli"
   },
   "dependencies": {
     "oxc-resolver": "11.24.2"

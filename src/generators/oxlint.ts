@@ -1,5 +1,13 @@
-import { $, write } from "bun";
+import { $ } from "bun";
 import { z } from "zod";
+
+import {
+  DISABLED_RULES,
+  ENABLED_RULES,
+  validateRuleCatalog,
+  validateRuleReferences,
+} from "./oxlint-rules.ts";
+import { writePreset } from "./write-preset.ts";
 
 type RuleOption = boolean | number | string | Record<string, unknown>;
 type RuleConfiguration = string | [string, ...RuleOption[]];
@@ -59,68 +67,6 @@ const RELATIVE_IMPORT_PATTERNS = [
   { group: ["./**"], message: "Use a path alias instead of a relative import." },
 ];
 
-const DISABLED = new Set([
-  "eslint/capitalized-comments",
-  "eslint/require-unicode-regexp",
-  "typescript/consistent-return",
-  "typescript/explicit-function-return-type",
-  "typescript/explicit-module-boundary-types",
-  "import/group-exports",
-  "import/exports-last",
-  "eslint/require-await",
-  "typescript/require-await",
-  "eslint/no-magic-numbers",
-  "eslint/sort-keys",
-  "import/no-default-export",
-  "unicorn/no-null",
-  "import/prefer-default-export",
-  "oxc/no-async-await",
-  "eslint/no-ternary",
-  "typescript/non-nullable-type-assertion-style",
-  "eslint/arrow-body-style",
-  "import/no-named-export",
-  "eslint/vars-on-top",
-  "oxc/no-rest-spread-properties",
-  "eslint/no-undefined",
-  "jsdoc/require-param-type",
-  "eslint/sort-imports",
-  "oxc/no-optional-chaining",
-  "eslint/no-duplicate-imports",
-  "eslint/no-nested-ternary",
-  "unicorn/no-nested-ternary",
-  "eslint/id-length",
-  "eslint/no-undef",
-  "eslint/prefer-object-spread",
-  "unicorn/prefer-ternary",
-  "eslint/one-var",
-  "eslint/no-underscore-dangle",
-  "typescript/prefer-namespace-keyword",
-  "typescript/prefer-readonly-parameter-types",
-  "typescript/prefer-reduce-type-parameter",
-  "typescript/promise-function-async",
-  "vitest/prefer-called-exactly-once-with",
-  "vitest/prefer-import-in-mock",
-  "vitest/prefer-importing-vitest-globals",
-  "vitest/prefer-expect-resolves",
-  "vitest/require-awaited-expect-poll",
-  "vitest/require-local-test-context-for-concurrent-snapshots",
-  "vitest/no-hooks",
-  "vitest/prefer-called-once",
-  "vitest/prefer-to-be-falsy",
-  "vitest/prefer-to-be-truthy",
-  "vitest/prefer-todo",
-  "react/jsx-no-constructed-context-values",
-  "react/forbid-component-props",
-  "react/jsx-no-literals",
-  "react/jsx-props-no-spreading",
-  "react/no-set-state",
-  "react/react-in-jsx-scope",
-  "vue/require-default-prop",
-  "eslint/no-eq-null",
-  "typescript/unbound-method",
-  "eslint/init-declarations",
-]);
-
 const OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/complexity": ["error", 8],
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
@@ -134,6 +80,7 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/max-nested-callbacks": ["error", 3],
   "eslint/max-params": ["error", 3],
   "eslint/max-statements": ["error", 25],
+  "eslint/new-cap": ["error", { capIsNewExceptionPattern: "^[A-Z][\\w$]*\\.[A-Z]" }],
   "eslint/no-restricted-imports": ["error", { patterns: RELATIVE_IMPORT_PATTERNS }],
   "eslint/no-restricted-exports": [
     "error",
@@ -282,15 +229,10 @@ const OVERRIDES: Record<string, RuleConfiguration> = {
 };
 
 const JAVASCRIPT_FILES = ["**/*.js", "**/*.jsx", "**/*.cjs", "**/*.mjs"];
-
 const TYPESCRIPT_FILES = ["**/*.ts", "**/*.tsx", "**/*.cts", "**/*.mts"];
-
 const JSX_FILES = ["**/*.jsx", "**/*.tsx"];
-
 const DECLARATION_FILES = ["**/*.d.ts", "**/*.d.cts", "**/*.d.mts"];
-
 const COMMONJS_CONFIG_FILES = ["**/*.config.js", "**/*.config.cjs", "**/.*rc.js", "**/.*rc.cjs"];
-
 const TEST_SUPPORT_FILES = ["**/tests/**", "**/__tests__/**", "**/test-utils.*"];
 
 const TEST_FILES = [
@@ -330,10 +272,6 @@ const TEST_FILES = [
 
 const GLOBAL_OVERRIDES: ConfigOverride[] = [
   {
-    files: ["*.config.ts"],
-    rules: { "import/no-nodejs-modules": "off" },
-  },
-  {
     files: TYPESCRIPT_FILES,
     rules: { "eslint/default-case": "off" },
   },
@@ -360,7 +298,6 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
       "eslint/no-implicit-globals": "off",
       "eslint/no-undef": "off",
       "import/no-commonjs": "off",
-      "import/no-nodejs-modules": "off",
       "import/unambiguous": "off",
       "typescript/no-require-imports": "off",
       "typescript/no-unsafe-argument": "off",
@@ -397,9 +334,7 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
 ];
 
 const PRESET_OVERRIDES: Record<string, ConfigOverride[]> = {};
-
 const PRESET_RULES: Record<string, Record<string, RuleConfiguration>> = {};
-
 const CSTRLCS_PLUGIN = "@cstrlcs/configs/plugins/cstrlcs.js";
 
 const CSTRLCS_RULES: Record<string, RuleConfiguration> = {
@@ -442,15 +377,33 @@ const VALID_OXLINT_PLUGINS = new Set([
   "react",
 ]);
 
-const output = await $`bunx oxlint --rules -f json`.text();
+function normalizeScope(scope: string) {
+  return scope.replaceAll("_", "-");
+}
+
+const output =
+  await $`bunx --no-install oxlint --config ./src/generators/oxlint-catalog.json --rules -f json`.text();
+
 const rules = z.array(RuleSchema).parse(JSON.parse(output));
+const availableRules = rules.map((rule) => `${normalizeScope(rule.scope)}/${rule.value}`);
+
+validateRuleCatalog(availableRules);
+
+validateRuleReferences(availableRules, [
+  ...Object.keys(OVERRIDES),
+  ...Object.values(PRESET_RULES).flatMap((presetRules) => Object.keys(presetRules)),
+  ...[...GLOBAL_OVERRIDES, ...Object.values(PRESET_OVERRIDES).flat()].flatMap((override) =>
+    Object.keys(override.rules ?? {}),
+  ),
+]);
+
+const configuredRules = new Map([
+  ...ENABLED_RULES.map((key) => [key, "error"] as const),
+  ...DISABLED_RULES.map((key) => [key, "off"] as const),
+]);
 
 function toPlugins(scopes: readonly string[]) {
   return [...new Set(scopes.filter((scope) => VALID_OXLINT_PLUGINS.has(scope)))];
-}
-
-function normalizeScope(scope: string) {
-  return scope.replaceAll("_", "-");
 }
 
 function buildRules(preset: string, scopes: readonly string[]) {
@@ -461,8 +414,13 @@ function buildRules(preset: string, scopes: readonly string[]) {
       .filter((rule) => scopes.includes(normalizeScope(rule.scope)))
       .map((rule) => {
         const key = `${normalizeScope(rule.scope)}/${rule.value}`;
+        const severity = configuredRules.get(key);
 
-        return [key, DISABLED.has(key) ? "off" : (presetRules[key] ?? OVERRIDES[key] ?? "error")];
+        if (severity === undefined) {
+          throw new Error(`Unclassified Oxlint rule: ${key}`);
+        }
+
+        return [key, severity === "off" ? "off" : (presetRules[key] ?? OVERRIDES[key] ?? severity)];
       }),
   );
 }
@@ -490,13 +448,20 @@ function buildOverrides(preset: string, testRules: Record<string, RuleConfigurat
   ];
 }
 
-await $`mkdir -p oxlint`;
-
 await Promise.all(
   Object.entries(PRESETS).map(async ([preset, scopes]: readonly [string, readonly string[]]) => {
     const { baseRules, testRules } = splitTestRules(buildRules(preset, scopes));
 
     const config = {
+      categories: {
+        correctness: "off",
+        nursery: "off",
+        pedantic: "off",
+        perf: "off",
+        restriction: "off",
+        style: "off",
+        suspicious: "off",
+      },
       options: {
         denyWarnings: true,
         reportUnusedDisableDirectives: "error",
@@ -509,24 +474,6 @@ await Promise.all(
       overrides: buildOverrides(preset, testRules),
     };
 
-    await Promise.all([
-      write(
-        `oxlint/${preset}.js`,
-        `import { defineConfig } from "oxlint";
-
-export default defineConfig(${JSON.stringify(config, null, 2)});
-`,
-      ),
-      write(
-        `oxlint/${preset}.d.ts`,
-        `import type { OxlintConfig } from "oxlint";
-
-declare const config: OxlintConfig;
-export default config;
-`,
-      ),
-    ]);
+    await writePreset("oxlint", preset, config);
   }),
 );
-
-await $`bun run lint:fix`;

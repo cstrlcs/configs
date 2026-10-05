@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig/base.json",
+  "compilerOptions": {
+    "types": ["bun", "vitest/globals"]
+  },
   "exclude": ["node_modules", "plugins"]
 }

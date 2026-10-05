@@ -101,6 +101,60 @@ export function second() {}`,
 export function second() {}`,
     },
     {
+      code: `const a = 1;
+
+const b = 2;
+
+
+const c = 3;`,
+      errors: [{ messageId: "unexpected" }, { messageId: "unexpected" }],
+      output: `const a = 1;
+const b = 2;
+const c = 3;`,
+    },
+    {
+      code: `function run() {
+  const a = 1;
+
+  const b = 2;
+
+  start();
+
+  stop();
+
+  return a;
+}`,
+      errors: [{ messageId: "unexpected" }, { messageId: "unexpected" }],
+      output: `function run() {
+  const a = 1;
+  const b = 2;
+
+  start();
+  stop();
+
+  return a;
+}`,
+    },
+    {
+      code: `export const a = 1;
+
+export const b = 2;
+const options = {
+  a: 1,
+};
+
+const c = 3;`,
+      errors: [{ messageId: "unexpected" }, { messageId: "missing" }],
+      output: `export const a = 1;
+export const b = 2;
+
+const options = {
+  a: 1,
+};
+
+const c = 3;`,
+    },
+    {
       code: "const a = 1; run();",
       errors: [{ messageId: "missing" }],
       output: null,
@@ -125,5 +179,12 @@ run();`,
     `function run() {
   return 1;
 }`,
+    `import a from "a";
+
+import b from "./b";`,
+    `const a = 1;
+
+// a comment
+const b = 2;`,
   ],
 });

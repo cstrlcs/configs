@@ -54,13 +54,7 @@ function canBeGrouped(previous: Statement, next: Statement) {
   return next.type === "ImportDeclaration" || (isSingleLine(previous) && isSingleLine(next));
 }
 
-function hasBlankLineBetween(context: Context, previous: Statement, next: Statement) {
-  return context.sourceCode.lines
-    .slice(previous.loc.end.line, next.loc.start.line - 1)
-    .some((line) => line.trim() === "");
-}
-
-function report(context: Context, previous: Statement, next: Statement) {
+function reportMissing(context: Context, previous: Statement, next: Statement) {
   if (previous.loc.end.line === next.loc.start.line) {
     context.report({ messageId: "missing", node: next });
 
@@ -76,16 +70,45 @@ function report(context: Context, previous: Statement, next: Statement) {
   });
 }
 
+function reportUnexpected(context: Context, previous: Statement, next: Statement) {
+  const { lineStartIndices } = context.sourceCode;
+  const startOfFollowingLine = lineStartIndices[previous.loc.end.line] ?? 0;
+  const startOfNextLine = lineStartIndices[next.loc.start.line - 1] ?? startOfFollowingLine;
+
+  context.report({
+    fix: (fixer) => fixer.removeRange([startOfFollowingLine, startOfNextLine]),
+    messageId: "unexpected",
+    node: next,
+  });
+}
+
+function checkPair(context: Context, previous: Statement, next: Statement) {
+  const linesBetween = context.sourceCode.lines.slice(
+    previous.loc.end.line,
+    next.loc.start.line - 1,
+  );
+
+  const blankLines = linesBetween.filter((line) => line.trim() === "").length;
+
+  if (!canBeGrouped(previous, next)) {
+    if (blankLines === 0) {
+      reportMissing(context, previous, next);
+    }
+  } else if (
+    next.type !== "ImportDeclaration" &&
+    blankLines > 0 &&
+    blankLines === linesBetween.length
+  ) {
+    reportUnexpected(context, previous, next);
+  }
+}
+
 function check(context: Context, statements: readonly Statement[]) {
   for (const [index, next] of statements.entries()) {
     const previous = statements[index - 1];
 
-    if (
-      previous !== undefined &&
-      !canBeGrouped(previous, next) &&
-      !hasBlankLineBetween(context, previous, next)
-    ) {
-      report(context, previous, next);
+    if (previous !== undefined) {
+      checkPair(context, previous, next);
     }
   }
 }
@@ -94,11 +117,12 @@ export const paddingBetweenStatements = defineRule({
   meta: {
     docs: {
       description:
-        "Require a blank line between statements, except between single-line statements of the same kind.",
+        "Require a blank line between statements, and forbid one between single-line statements of the same kind.",
     },
     fixable: "whitespace",
     messages: {
       missing: "Expected a blank line before this statement.",
+      unexpected: "Unexpected blank line before this statement.",
     },
     schema: [],
     type: "layout",

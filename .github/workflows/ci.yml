@@ -18,28 +18,5 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.0
-
-      # Plugin tests use Oxlint's RuleTester, which needs Node.
-      - name: Install Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Generate and lint
-        run: bun run build
-
-      - name: Verify generated files
-        run: git diff --exit-code
-
-      - name: Typecheck
-        run: bunx tsc --noEmit
-
-      - name: Test plugins
-        run: bun run test
+      - name: Validate
+        uses: ./.github/actions/validate
