@@ -18,6 +18,7 @@ export const ENABLED_RULES: readonly string[] = [
   "eslint/grouped-accessor-pairs",
   "eslint/guard-for-in",
   "eslint/id-denylist",
+  "eslint/id-length",
   "eslint/id-match",
   "eslint/logical-assignment-operators",
   "eslint/max-classes-per-file",
@@ -716,7 +717,6 @@ export const ENABLED_RULES: readonly string[] = [
 export const DISABLED_RULES: readonly string[] = [
   "eslint/arrow-body-style",
   "eslint/capitalized-comments",
-  "eslint/id-length",
   "eslint/init-declarations",
   "eslint/no-alert",
   "eslint/no-duplicate-imports",

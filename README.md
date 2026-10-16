@@ -200,6 +200,10 @@ diagnostics are enabled in the config itself, so the same checks run from the CL
 The baseline also enforces explicit return types, rejects ordinary type assertions, bans `any`
 and non-null assertions, checks unsafe TypeScript operations and floating promises, and enables
 strict complexity, callback, function, parameter, statement, snapshot, and file-size limits.
+JSX and TSX files must use PascalCase filenames, such as `UserCard.tsx`; other files may use
+camelCase, PascalCase, or kebab-case. Identifiers must be at least two characters long, except `_`
+and generic type parameters, and common abbreviations such as `err`, `evt`, `idx`, `cb`, `obj`,
+and `prev` are denied in favor of their full names.
 The React preset assumes the automatic JSX transform and React Compiler, so it neither requires
 `React` in JSX scope nor demands manual memoization of constructed context values. Rules that conflict with React Native styling are relaxed: `style` may be passed to components,
 props may be spread to forward them to wrapped primitives, literal JSX text is allowed, and JSX
