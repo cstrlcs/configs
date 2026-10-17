@@ -5,8 +5,10 @@ export type Fix =
   | { readonly kind: "install-dependencies" }
   | { readonly kind: "manual"; readonly instructions: string };
 
+export type Status = "passed" | "warning" | "failed";
+
 export interface Check {
-  readonly passed: boolean;
+  readonly status: Status;
   readonly description: string;
   readonly fix: Fix;
 }
@@ -18,13 +20,28 @@ export interface Requirement {
 
 interface CheckInput<F extends Fix> {
   readonly passed: boolean;
+  readonly warning?: boolean;
   readonly label: string;
   readonly detail: string;
   readonly fix: F;
 }
 
-export function check<F extends Fix>({ passed, label, detail, fix }: CheckInput<F>) {
-  return { passed, description: passed ? label : `${label} (${detail})`, fix };
+export function check<F extends Fix>({
+  passed,
+  warning = false,
+  label,
+  detail,
+  fix,
+}: CheckInput<F>) {
+  if (passed) {
+    return { status: "passed", description: label, fix } as const;
+  }
+
+  return {
+    status: warning ? "warning" : "failed",
+    description: `${label} (${detail})`,
+    fix,
+  } as const;
 }
 
 export function expectation(label: string, actual: string, expected: string) {

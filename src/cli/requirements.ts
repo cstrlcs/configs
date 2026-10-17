@@ -5,7 +5,14 @@ import { semver } from "bun";
 
 import { check, expectation, json, manual, write } from "./check.ts";
 import { isDirectory, readJson, readText, scanGlob, stripDotSlash, writeFiles } from "./files.ts";
-import { declaredDependencyVersion, dependencies, objectField, stringField } from "./json.ts";
+import {
+  EMPTY_OBJECT,
+  declaredDependencyVersion,
+  dependencies,
+  isJsonObject,
+  objectField,
+  stringField,
+} from "./json.ts";
 import { CONFIGS_DIR, REQUIRED_DEPENDENCIES, readPeers } from "./package-manager.ts";
 import { packageDirs } from "./project.ts";
 import { tsconfigRequirement } from "./tsconfig-requirement.ts";
@@ -40,6 +47,20 @@ const REQUIRED_GITIGNORE = [
   ".DS_Store",
   ".claude",
 ];
+
+const DEPENDENCY_RULE = "cstrlcs/no-forbidden-dependencies";
+const GENERATED_DEPENDENCY_RULES = ["error"];
+const dependencyRuleDeclaration = `"${DEPENDENCY_RULE}": ${JSON.stringify(GENERATED_DEPENDENCY_RULES)}`;
+
+const oxlintConfig = `{
+  ...config,
+  rules: {
+    ...config.rules,
+    ${dependencyRuleDeclaration},
+  },
+}`;
+
+const DEPENDENCY_RULES_HELP = `Map this project's source folders and the direction imports may flow between them, then add one entry per forbidden direction to the "${DEPENDENCY_RULE}" options in oxlint.config.ts. The option format and an example are under "${DEPENDENCY_RULE}" in ${CONFIGS_DIR}/README.md. Leave it with no entries and ignore this warning when the project has no boundaries worth enforcing, such as a small project with a single source folder.`;
 
 const CONFLICTING_CONFIGS = [
   ".eslintrc",
@@ -220,6 +241,7 @@ async function presetFor({ root, dirs }: Project) {
 function toolConfigRequirement(
   tool: string,
   presetOf: (project: Project) => string | Promise<string>,
+  exported = "config",
 ) {
   const path = `${tool}.config.ts`;
 
@@ -244,7 +266,7 @@ function toolConfigRequirement(
 
 import config from ${specifier};
 
-export default defineConfig(config);
+export default defineConfig(${exported});
 `,
           }),
         }),
@@ -252,6 +274,62 @@ export default defineConfig(config);
     },
   } satisfies Requirement;
 }
+
+async function readDependencyRules(root: string) {
+  if ((await readText(root, "oxlint.config.ts")) === null) {
+    return GENERATED_DEPENDENCY_RULES;
+  }
+
+  try {
+    const module: unknown = await import(`${root}/oxlint.config.ts`);
+    const config = isJsonObject(module) ? objectField(module, "default") : EMPTY_OBJECT;
+
+    return objectField(config, "rules")[DEPENDENCY_RULE];
+  } catch (error) {
+    return error instanceof Error ? error : new Error("Unknown error", { cause: error });
+  }
+}
+
+const dependencyRulesRequirement: Requirement = {
+  files: [],
+
+  inspect: async ({ root }) => {
+    const label = "oxlint.config.ts dependency rules";
+    const options = await readDependencyRules(root);
+
+    if (options instanceof Error) {
+      return [
+        check({
+          passed: false,
+          label,
+          detail: `oxlint.config.ts could not be loaded: ${options.message}`,
+          fix: manual("Fix the error in oxlint.config.ts or install its missing dependencies"),
+        }),
+      ];
+    }
+
+    if (options === undefined) {
+      return [
+        check({
+          passed: false,
+          label,
+          detail: `"${DEPENDENCY_RULE}" is not declared`,
+          fix: manual(`Add ${dependencyRuleDeclaration} to "rules" in oxlint.config.ts`),
+        }),
+      ];
+    }
+
+    return [
+      check({
+        passed: Array.isArray(options) && options.some((option) => isJsonObject(option)),
+        warning: true,
+        label,
+        detail: `"${DEPENDENCY_RULE}" has no rules`,
+        fix: manual(DEPENDENCY_RULES_HELP),
+      }),
+    ];
+  },
+};
 
 function vscodeFileRequirement(name: string) {
   const path = `.vscode/${name}`;
@@ -366,7 +444,8 @@ const requirements: readonly Requirement[] = [
   exactFileRequirement(".editorconfig", EDITORCONFIG),
   gitignoreRequirement,
   tsconfigRequirement,
-  toolConfigRequirement("oxlint", presetFor),
+  toolConfigRequirement("oxlint", presetFor, oxlintConfig),
+  dependencyRulesRequirement,
   toolConfigRequirement("oxfmt", () => "base"),
   vscodeFileRequirement("settings.json"),
   vscodeFileRequirement("extensions.json"),
@@ -386,7 +465,7 @@ export async function diagnose(project: Project) {
 
 export async function repair(project: Project, signal?: AbortSignal) {
   const checks = await diagnose(project);
-  const failed = checks.filter(({ passed }) => !passed);
+  const failed = checks.filter(({ status }) => status !== "passed");
 
   signal?.throwIfAborted();
 

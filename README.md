@@ -34,6 +34,7 @@ This will:
 - Set `packageManager` in `package.json` to the running Bun version and `type` to `"module"`, and
   default `name` to the directory name and `private` to `true` when they are missing
 - Create `oxlint.config.ts` with the preset that matches the project (`vue`, `react` or `base`) and
+  an empty [`cstrlcs/no-forbidden-dependencies`](#cstrlcsno-forbidden-dependencies), and
   `oxfmt.config.ts`
 - Create `tsconfig.json` extending the base config
 - Create `bun.d.ts` and include it in `tsconfig.json`
@@ -41,7 +42,8 @@ This will:
 - Write `.gitattributes` with LF line endings and `.editorconfig` matching oxfmt
 - Append the required entries to `.gitignore`
 - Copy `.vscode/settings.json` and `.vscode/extensions.json`
-- Warn about conflicting tool configs it finds
+- Warn about conflicting tool configs it finds, and when `cstrlcs/no-forbidden-dependencies` has no
+  rules
 
 ## Doctor
 
@@ -63,6 +65,9 @@ This verifies:
   `.claude`
 - `tsconfig.json` extends the expected preset and Bun test globals are set up
 - `oxlint.config.ts` imports the expected preset and `oxfmt.config.ts` imports the base preset
+- `cstrlcs/no-forbidden-dependencies` is declared in `oxlint.config.ts`. Declared without rules it
+  only warns, and the message tells an agent how to map the project's boundaries or when to ignore
+  it
 - The `lint` and `lint:fix` scripts match the ones below
 - No ESLint, Prettier, Biome, `.oxlintrc.json` or `*.code-workspace` config exists in the root or
   in any workspace, and no workspace has its own `.vscode/settings.json`
@@ -227,7 +232,8 @@ Every preset loads it and enables `cstrlcs/name-after-property`, `cstrlcs/naming
 `cstrlcs/no-single-use-one-liners`, `cstrlcs/padding-between-statements`, the
 [UI rules](#ui-rules) and the
 [Tailwind CSS rules](#tailwind-css-rules);
-`cstrlcs/no-forbidden-dependencies` needs project-specific options, so it stays opt-in. A rule is
+`cstrlcs/no-forbidden-dependencies` needs project-specific options, so it stays out of the presets
+and the installer adds it to `oxlint.config.ts`. A rule is
 only added here when no native Oxlint rule covers it.
 
 ### `cstrlcs/name-after-property`

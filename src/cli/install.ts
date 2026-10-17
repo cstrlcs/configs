@@ -18,7 +18,7 @@ Make sure you have a backup of those files before proceeding.`;
 export async function install(root: string, yes: boolean, signal?: AbortSignal) {
   const bunRuntime = checkBunRuntime();
 
-  if (!bunRuntime.passed) {
+  if (bunRuntime.status !== "passed") {
     throw new Error(`${bunRuntime.description}\n   → ${bunRuntime.fix.instructions}`);
   }
 

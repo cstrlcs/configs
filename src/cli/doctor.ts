@@ -1,21 +1,29 @@
+import type { Status } from "./check.ts";
+
 import { loadProject } from "./project.ts";
 import { diagnose } from "./requirements.ts";
 import { print, printManualFix } from "./terminal.ts";
+
+const STATUS_ICONS: Record<Status, string> = {
+  passed: "✅",
+  warning: "⚠️ ",
+  failed: "❌",
+};
 
 export async function doctor(root: string) {
   const checks = await diagnose(await loadProject(root));
 
   for (const result of checks) {
-    print(`${result.passed ? "✅" : "❌"} ${result.description}`);
+    print(`${STATUS_ICONS[result.status]} ${result.description}`);
 
-    if (!result.passed) {
+    if (result.status !== "passed") {
       printManualFix(result.fix.kind === "manual" ? result.fix.instructions : undefined);
     }
   }
 
   print();
 
-  const failed = checks.filter(({ passed }) => !passed);
+  const failed = checks.filter(({ status }) => status === "failed");
 
   if (failed.length === 0) {
     print("✅ Everything looks good!");
