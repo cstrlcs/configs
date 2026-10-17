@@ -36,7 +36,7 @@
     "./tsconfig/*": "./tsconfig/*"
   },
   "scripts": {
-    "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxfmt.ts && bun ./src/generators/oxlint.ts",
+    "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxfmt.ts && bun ./src/generators/oxlint.ts && oxfmt oxfmt/* oxlint/* plugins/*",
     "release": "publi.sh",
     "check": "bun run lint && bun run format:check && tsc --noEmit && bun run test",
     "format:check": "oxfmt --check",
@@ -50,6 +50,7 @@
   "devDependencies": {
     "@oxlint/plugins": "1.80.0",
     "@types/bun": "1.4.0",
+    "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
     "vitest": "5.0.2",
     "zod": "4.5.1"

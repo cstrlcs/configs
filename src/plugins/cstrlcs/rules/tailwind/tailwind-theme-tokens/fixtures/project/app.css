@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+@theme {
+  --color-*: initial;
+  --text-body: 15px;
+}

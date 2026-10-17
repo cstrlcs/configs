@@ -1,17 +1,17 @@
 import { REQUIRED_DEPENDENCIES, addDependencies } from "./package-manager.ts";
 import { loadProject } from "./project.ts";
-import { MANAGED_FILES, checkBunRuntime, repair } from "./requirements.ts";
+import { managedFiles, checkBunRuntime, repair } from "./requirements.ts";
 import { isInteractive, print, printManualFix, run } from "./terminal.ts";
 
 function bulletList(items: readonly string[]) {
   return items.map((item) => `  - ${item}`).join("\n");
 }
 
-const WARNING = `🚨 This script will add the following dependencies to your project:
+const warning = `🚨 This script will add the following dependencies to your project:
 ${bulletList(REQUIRED_DEPENDENCIES)}
 
 It will also edit/overwrite the following files:
-${bulletList(MANAGED_FILES)}
+${bulletList(managedFiles)}
 
 Make sure you have a backup of those files before proceeding.`;
 
@@ -23,7 +23,7 @@ export async function install(root: string, yes: boolean, signal?: AbortSignal) 
   }
 
   await loadProject(root);
-  print(WARNING);
+  print(warning);
 
   if (!yes) {
     if (!isInteractive()) {

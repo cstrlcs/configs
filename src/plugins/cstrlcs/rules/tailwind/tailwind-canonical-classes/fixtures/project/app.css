@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme {
+  --color-*: initial;
+}
+
+@utility stack {
+  display: flex;
+  flex-direction: column;
+}

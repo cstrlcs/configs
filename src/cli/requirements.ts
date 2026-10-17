@@ -358,7 +358,7 @@ const dependenciesRequirement: Requirement = {
   },
 };
 
-const REQUIREMENTS: readonly Requirement[] = [
+const requirements: readonly Requirement[] = [
   bunRuntimeRequirement,
   packageJsonRequirement,
   workspacesRequirement,
@@ -374,11 +374,11 @@ const REQUIREMENTS: readonly Requirement[] = [
   dependenciesRequirement,
 ];
 
-export const MANAGED_FILES = REQUIREMENTS.flatMap(({ files }) => files);
+export const managedFiles = requirements.flatMap(({ files }) => files);
 
 export async function diagnose(project: Project) {
   const checks = await Promise.all(
-    REQUIREMENTS.map(async (requirement) => requirement.inspect(project)),
+    requirements.map(async (requirement) => requirement.inspect(project)),
   );
 
   return checks.flat();

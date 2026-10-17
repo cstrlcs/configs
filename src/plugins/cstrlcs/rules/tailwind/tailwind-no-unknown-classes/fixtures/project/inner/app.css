@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+@utility inner-card {
+  padding: 1rem;
+}
