@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
+import process from "node:process";
+
 import { cli } from "./program.ts";
 
 const controller = new AbortController();

@@ -1,4 +1,5 @@
 import type { Casing } from "../shared/casing.ts";
+import type { FunctionNode } from "../shared/functions.ts";
 import type { Context, ESTree, Visitor } from "@oxlint/plugins";
 import { defineRule } from "@oxlint/plugins";
 
@@ -16,8 +17,7 @@ import {
   returnedExpressions,
   returnsJsx,
 } from "../shared/expressions.ts";
-
-type FunctionNode = ESTree.ArrowFunctionExpression | ESTree.Function;
+import { isFunctionExpression } from "../shared/functions.ts";
 
 function isAmbient(node: ESTree.Node) {
   for (let current: ESTree.Node | null = node; current !== null; current = current.parent) {
@@ -27,10 +27,6 @@ function isAmbient(node: ESTree.Node) {
   }
 
   return false;
-}
-
-function isFunctionExpression(node: ESTree.Expression): node is FunctionNode {
-  return node.type === "ArrowFunctionExpression" || node.type === "FunctionExpression";
 }
 
 function casingMessage(name: string, casing: Casing) {
@@ -146,17 +142,19 @@ function checkInterface(context: Context, node: ESTree.TSInterfaceDeclaration) {
   }
 }
 
+function checkClass(context: Context, node: ESTree.Class) {
+  if (node.id !== null) {
+    checkType(context, node, node.id);
+  }
+}
+
 function typeVisitors(context: Context) {
   return {
     ClassDeclaration(node) {
-      if (node.id !== null) {
-        checkType(context, node, node.id);
-      }
+      checkClass(context, node);
     },
     ClassExpression(node) {
-      if (node.id !== null) {
-        checkType(context, node, node.id);
-      }
+      checkClass(context, node);
     },
     TSEnumDeclaration(node) {
       checkType(context, node, node.id);

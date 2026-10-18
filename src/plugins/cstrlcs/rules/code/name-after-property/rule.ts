@@ -1,11 +1,10 @@
-import type { Context, ESTree, Scope, Variable } from "@oxlint/plugins";
+import type { Context, ESTree, Reference, Scope, Variable } from "@oxlint/plugins";
 import { defineRule } from "@oxlint/plugins";
 
 import { hasBooleanPrefix, isProducerName, matchesCasing } from "../shared/casing.ts";
 import { isModuleConstant, isStaticValue } from "../shared/constants.ts";
 import { isBooleanExpression, isComponentFactory } from "../shared/expressions.ts";
-
-type Reference = Variable["references"][number];
+import { isFunctionExpression } from "../shared/functions.ts";
 
 function filledKey({ identifier }: Reference) {
   const { parent } = identifier;
@@ -65,7 +64,7 @@ function keepsNaming(init: ESTree.Expression | null, key: string) {
     return false;
   }
 
-  if (init.type === "ArrowFunctionExpression" || init.type === "FunctionExpression") {
+  if (isFunctionExpression(init)) {
     return !hasBooleanPrefix(key) && !isProducerName(key);
   }
 

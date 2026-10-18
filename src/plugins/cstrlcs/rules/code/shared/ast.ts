@@ -1,6 +1,7 @@
-import type { Context, ESTree } from "@oxlint/plugins";
+import type { Context, ESTree, Range } from "@oxlint/plugins";
 
 export type VisitorKeys = Context["sourceCode"]["visitorKeys"];
+export type IdentifierNode = Extract<ESTree.Node, { type: "Identifier" }>;
 
 export function children(keys: VisitorKeys, node: ESTree.Node) {
   return (keys[node.type] ?? []).flatMap((key) => {
@@ -29,4 +30,12 @@ export function contains(
   }
 
   return false;
+}
+
+export function isWithin(inner: Range, outer: Range) {
+  return inner[0] >= outer[0] && inner[1] <= outer[1];
+}
+
+export function moduleExportName(name: ESTree.ModuleExportName) {
+  return name.type === "Literal" ? name.value : name.name;
 }

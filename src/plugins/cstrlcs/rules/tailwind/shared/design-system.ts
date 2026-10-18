@@ -90,7 +90,7 @@ async function loadDesignSystem({ base, css, tailwind }: Project) {
   return module.__unstable__loadDesignSystem(css, { base, loadModule, loadStylesheet });
 }
 
-function getDesignSystem(project: Project) {
+async function getDesignSystem(project: Project) {
   const key = `${project.base}\0${project.css}`;
   const cached = designSystems.get(key);
 

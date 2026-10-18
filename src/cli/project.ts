@@ -2,7 +2,7 @@ import type { JsonObject } from "./json.ts";
 import { Glob } from "bun";
 
 import { readText, scanGlob, stripDotSlash } from "./files.ts";
-import { EMPTY_OBJECT, decodeJsonObject, isJsonObject } from "./json.ts";
+import { decodeJsonObject, EMPTY_OBJECT, isJsonObject } from "./json.ts";
 
 export interface Project {
   readonly root: string;
@@ -37,7 +37,7 @@ async function workspaceDirs(root: string, patterns: readonly string[]) {
   const matches = await Promise.all(
     patterns
       .filter((pattern) => !pattern.startsWith("!"))
-      .map((pattern) => packageDirs(root, pattern)),
+      .map(async (pattern) => packageDirs(root, pattern)),
   );
 
   return [...new Set(matches.flat())].filter(

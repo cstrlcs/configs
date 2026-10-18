@@ -39,7 +39,7 @@ This will:
 - Create `tsconfig.json` extending the base config
 - Create `bun.d.ts` and include it in `tsconfig.json`
 - Add `lint` and `lint:fix` scripts to `package.json`
-- Write `.gitattributes` with LF line endings and `.editorconfig` matching oxfmt
+- Write `.gitattributes` with LF line endings
 - Append the required entries to `.gitignore`
 - Copy `.vscode/settings.json` and `.vscode/extensions.json`
 - Warn about conflicting tool configs it finds, and when `cstrlcs/no-forbidden-dependencies` has no
@@ -60,8 +60,8 @@ This verifies:
 - `package.json` has a `name`, an explicit boolean `private` and `"type": "module"`
 - In a monorepo, detected by an `apps` directory in the root, `workspaces` is declared and covers
   every `apps/*` package
-- `.gitattributes`, `.editorconfig`, `.vscode/settings.json` and `.vscode/extensions.json` match the
-  shipped versions exactly
+- `.gitattributes`, `.vscode/settings.json` and `.vscode/extensions.json` match the shipped versions
+  exactly
 - `.gitignore` contains `.env`, `.env.*`, `!.env*.example`, `node_modules/`, `.DS_Store` and
   `.claude/`, written as is or with a `**/` prefix, and `node_modules` and `.claude` also without
   the trailing slash
@@ -71,8 +71,8 @@ This verifies:
   only warns, and the message tells an agent how to map the project's boundaries or when to ignore
   it
 - The `lint` and `lint:fix` scripts match the ones below
-- No ESLint, Prettier, Biome, `.oxlintrc.json` or `*.code-workspace` config exists in the root or
-  in any workspace, and no workspace has its own `.vscode/settings.json`
+- No ESLint, Prettier, Biome, `.oxlintrc.json`, `.editorconfig` or `*.code-workspace` config exists
+  in the root or in any workspace, and no workspace has its own `.vscode/settings.json`
 - All required packages are declared, `@cstrlcs/configs` is pinned to an exact version, and
   `oxlint`, `oxlint-tsgolint` and `oxfmt` are declared and installed at the exact
   `peerDependencies` versions
@@ -122,19 +122,6 @@ export default defineConfig(config);
 /// <reference types="bun-types/test-globals" />
 
 export {};
-```
-
-`.editorconfig`:
-
-```ini
-root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-indent_size = 2
-indent_style = space
-insert_final_newline = true
 ```
 
 `package.json`:
@@ -218,7 +205,12 @@ may nest up to four levels deep. `jsx-a11y/no-redundant-roles` accepts `role="li
 `ol`, which keeps a styled list announced as a list, and `jsx-a11y/anchor-ambiguous-text` also
 rejects Portuguese link text such as "clique aqui" and "saiba mais". The React and Vue presets
 forbid `alert()`, `confirm()` and `prompt()` in favor of a dialog that names the action; the base
-preset allows them, because Bun implements them as terminal prompts.
+preset allows them, because Bun implements them as terminal prompts. `react/jsx-key` also requires
+`key` before any spread and on fragments in iterators, and rejects duplicate keys. The `node`
+plugin is enabled, so callback errors must be handled and paths are not built by concatenating
+`__dirname`. The base preset restricts the `process` and `Buffer` globals, so they are imported
+from `node:process` and `node:buffer` (or required in CommonJS config files); the React and Vue
+presets leave them alone, because bundlers replace `process.env` only on the free global.
 
 Oxlint 1.80.0 has no built-in rules for hardcoded secrets, general commented-out code, TODOs
 that specifically lack an issue reference, or disable comments that specifically lack a
@@ -228,15 +220,10 @@ rules described below.
 ## Plugins
 
 `@cstrlcs/configs/plugins/cstrlcs.js` is an Oxlint [JS plugin](https://oxc.rs/docs/guide/usage/linter/js-plugins.html).
-Every preset loads it and enables `cstrlcs/name-after-property`, `cstrlcs/naming`,
-`cstrlcs/no-comments`,
-`cstrlcs/no-explicit-return-type`,
-`cstrlcs/no-single-use-one-liners`, `cstrlcs/padding-between-statements`, the
-[UI rules](#ui-rules) and the
-[Tailwind CSS rules](#tailwind-css-rules);
-`cstrlcs/no-forbidden-dependencies` needs project-specific options, so it stays out of the presets
-and the installer adds it to `oxlint.config.ts`. A rule is
-only added here when no native Oxlint rule covers it.
+Every preset loads it and enables every rule below except `cstrlcs/no-forbidden-dependencies`,
+which needs project-specific options, so it stays out of the presets and the installer adds it to
+`oxlint.config.ts`. A rule is only added here when no native Oxlint rule covers it, and none has
+options: each one always applies its strictest behavior.
 
 ### `cstrlcs/name-after-property`
 
@@ -373,17 +360,23 @@ count.
 - `cstrlcs/ui-no-manual-plural`: a ternary that compares with 1 and picks between a word and the
   word plus `s` or `es`, such as `count === 1 ? "file" : "files"`.
 
-### `cstrlcs/no-single-use-one-liners`
+### `cstrlcs/no-trivial-functions`
 
-Reports a function that is called once and only returns a one-line expression, so the call can be
-replaced by that expression. It covers function declarations and `const` function expressions and
-arrows whose body is that expression or a single `return` of it. It has no options and no fix.
+Reports a function that adds nothing over the expression it wraps. It looks at function declarations
+and at arrows and function expressions assigned to a `const`, in any scope, and has no options and
+no fix. A function is left alone when it is exported (`export`, `export { name }`, `export default`,
+`module.exports`, `exports.name`), has overload signatures, is async or a generator, returns a type
+predicate, or reads `this`, `super` or `arguments`.
 
-A function is skipped when it is exported, referenced anywhere other than one direct call (such as
-`items.filter(isEven)`), async, a generator, or a type predicate; when a parameter is destructured,
-defaulted or rest; and when its expression spans several lines, uses `this`, `super` or
-`arguments`, or contains `&&`, `||`, `??` or a ternary. The last exclusion keeps the rule from
-undoing a helper extracted to stay under `eslint/complexity`.
+- A function with a single direct call whose body is one expression, bare or behind `return`, so the
+  call can be replaced by that expression. Callbacks such as `orders.filter(isPaid)` are not direct
+  calls. Destructured, defaulted and rest parameters exempt it, and so do bodies that span several
+  lines or contain `&&`, `||`, `??` or a ternary. That last exemption protects helpers split out to
+  stay under `eslint/complexity`.
+- A function with fewer than five uses whose body just reads a property of a parameter
+  (`invoice => invoice.customer.email`) or hands its parameters, unchanged and in order, to a call
+  on a plain name or member path (`token => decodeJwt(token)`). Passing it around as a value more
+  than once exempts it, because removing a listener needs the same function that was added.
 
 ```ts
 function isTrue(value: boolean) {
@@ -418,6 +411,218 @@ const z = 44;
 
 return x;
 ```
+
+### `cstrlcs/no-duplicated-logic`
+
+Reports code that was written twice. Code is compared token by token, so comments and formatting
+never hide a copy. It has no options and no fix.
+
+- A function of three or more lines whose body matches an earlier function in the file. Function
+  declarations, functions stored in variables, class and object methods and function-valued
+  properties take part; callbacks passed as arguments do not.
+- An `if` chain or `switch` whose branches all run the same code. When it ends in `else` or
+  `default`, the whole statement is reported; otherwise every branch after the first is. A `switch`
+  is never treated this way when a `case` with statements, other than the last, can fall through
+  because it does not end in `break`, `return`, `throw` or `continue`.
+- A branch or `case` spanning several lines that repeats an earlier one of the same chain. The
+  comparison ignores a trailing `break` and a block wrapping the whole `case`, and repeated
+  one-line branches are allowed.
+- A ternary that gives the same result either way, such as `ready ? value : value`.
+- The same operand on both sides of `-`, `/`, `%`, `<<`, `>>`, `>>>`, `&`, `|`, `^` or `??`, such
+  as `total - total`. `1 << 1` stays allowed as a bit flag. `&&` and `||` are reported only for
+  operands that `oxc/const-comparisons` does not compare, comparisons are left to
+  `eslint/no-self-compare`, and operands with a call, `new`, an assignment, `++`/`--`, `await` or
+  `yield` are skipped, since `next() - next()` can be deliberate.
+
+### `cstrlcs/no-useless-collections`
+
+Reports collections whose contents can never matter. It has no options and no fix.
+
+- An element written again before anything could read it, such as `slots[1] = a; slots[1] = b;` or
+  `cache.set("key", 1); cache.set("key", 2);`, keyed by a literal or an identifier. It works on any
+  collection expression, parameters and properties included. Only writes to other keys of the same
+  collection may sit between the two, so `slots[1] = a; slots[2] = b; slots[1] = c;` is still
+  reported. Any other statement, or a write whose value mentions the collection, starts the check
+  over. `slots[1]` and `slots["1"]` are the same element, while `set(1, value)` and
+  `set("1", value)` are different keys.
+- Reading or iterating a local array, `Map`, `Set`, `WeakMap` or `WeakSet` that is only ever
+  assigned empty and never receives elements. Passing it to a function, returning it or aliasing
+  it counts as possibly filling it.
+- A local collection that receives elements (`push`, `set`, `add`, element assignment and
+  similar) but is never read. Assigning it a new collection does not count as receiving elements.
+
+The last two checks skip parameters, imports, exported variables and top-level variables in
+scripts.
+
+### `cstrlcs/no-redundant-logic`
+
+Reports boolean logic that takes a detour.
+
+- An `if` whose branches only return `true` and `false`, either with `else` or followed by a
+  `return`, such as `if (ready) { return true; } return false;`. When the `if` branch returns
+  `false`, the fix returns the negated condition. When it returns `true`, the fix applies only to a
+  comparison or a `!` expression; for anything else, suggestions offer `Boolean(condition)` or the
+  bare condition. `else if` and runs of guard `if`s that each return a boolean are left alone.
+- A negated comparison such as `!(a === b)`, fixed to `a !== b`. `<`, `<=`, `>` and `>=` only get
+  a suggestion, because flipping them changes the result when an operand is `NaN`.
+
+No fix is offered when comments sit inside the replaced code. Collapsible `if`s are left to
+`unicorn/no-lonely-if`, and redundant jumps to `eslint/no-useless-return` and `eslint/no-continue`.
+
+### `cstrlcs/no-invariant-returns`
+
+Reports a function that gives back the same value whatever path it takes, such as
+`if (vip) { return 15; } return 15;`. Two returned values match when they are the same literal, or
+the same local variable that is written once and never handed to a call or changed through a member.
+A function is skipped when it has a single `return`, an empty `return`, a `throw` that escapes it or
+an end it can reach without returning, when it is a generator or an expression-bodied arrow, and
+when its top level does work (a call, `await`, `new` or a member write), as Proxy traps do. It is
+also skipped when the repetition looks deliberate: a literal when every branch that returns it also
+runs a call, an assignment, `await` or `++`/`--`, and a variable when some branch runs one of those
+without returning. It has no options and no fix.
+
+### `cstrlcs/no-trivial-type-aliases`
+
+Reports a type alias that ends at `bigint`, `boolean`, `null`, `number`, `string`, `symbol`,
+`undefined` or `unknown` once it is followed through the file's own top-level aliases, so
+`type Refund = Cents` is reported when `type Cents = number` is declared in the same file. Exporting
+the alias does not exempt it. An alias keeps its name when it takes type parameters or adds shape:
+unions, intersections and brands, arrays, tuples, `any`, `never`, `object`, and names the file
+imports or never declares. An alias inside a function or a `declare module` block is judged by its
+own type only. It has no options and no fix.
+
+### `cstrlcs/no-em-dash`
+
+Reports a literal em dash (U+2014) in strings, template literals, JSX text and attributes, regexes
+and string literal types. Each piece of text is reported once however many dashes it holds, and the
+message asks for a rewrite, since trading the dash for a comma or a colon seldom fixes the sentence.
+Text that holds nothing but the dash passes as an empty-value placeholder, which for JSX text means
+being the element's only child apart from whitespace. Escape sequences such as `\u2014`, en dashes
+and `--` pass too. Comments are left to `cstrlcs/no-comments`. It has no options and no fix.
+
+### `cstrlcs/no-restricted-module-paths`
+
+Reports a module path that points into `node_modules` (`../node_modules/zod`) or into a local `dist`
+folder (`dist`, `./dist`, `../dist/invoices.js`). It checks imports, re-exports,
+`import x = require()` declarations, and `import()` and `require()` calls whose argument is a string
+or a template literal without expressions. A package's own `dist` path, like
+`katex/dist/katex.min.css`, does not start with a dot and passes. Files under `bin/` and files named
+`bin.*` are skipped, because a shipped executable imports the build. It has no options and no fix.
+
+### `cstrlcs/no-export-assignment`
+
+Forbids TypeScript's CommonJS `export =`, so modules use `export default` or named exports.
+Declaration files and `declare module` blocks are allowed, since they describe CommonJS packages.
+There is no fix, because `export default` changes what consumers import.
+
+### `cstrlcs/sort-specifiers`
+
+Requires named imports (by local name), named exports (by exported name) and `export … from`
+statements (by module path) in natural, case-insensitive order: `item2` before `item10`, `$store`
+before `_private` before `alpha`. The comparison is the one Oxfmt's `sortImports` uses for import
+paths, so the two never disagree: Oxfmt sorts import statements and this rule sorts what is inside
+them and the re-exports. Default and namespace imports stay first, `type` specifiers are sorted with
+values, whitespace is ignored, and ties keep their order. The fix moves the comments directly above
+an item and a comment that ends the item's line along with it. A hashbang and a block
+`oxlint-disable` or `oxlint-enable` directive (or its `eslint-` form) stay in place, since moving
+them would break the file or change what they cover.
+
+### `cstrlcs/no-deprecated-node-apis`
+
+Reports deprecated Node.js APIs that `typescript/no-deprecated` cannot see, because neither
+`@types/node` nor `bun-types` marks them `@deprecated`:
+
+- the modules `_linklist`, `_stream_wrap`, `constants`, `domain`, `freelist`, `punycode` and `sys`;
+- `process.binding`, `process.EventEmitter`, `process.env.NODE_REPL_HISTORY_FILE` and
+  `process.report.triggerReport`;
+- members the type definitions dropped, such as `crypto.createCipher`, `os.tmpDir`,
+  `util.isBoolean`, `util.print`, `tls.createSecurePair` and `SlowBuffer`;
+- calls that need `new`, such as `buffer.Buffer()`, global `Buffer()`, `zlib.Gzip()` and
+  `repl.REPLServer()`, and the `safe-buffer` package's `Buffer` and `SlowBuffer`;
+- the globals `GLOBAL`, `root`, `Intl.v8BreakIterator` and `COUNTER_*`.
+
+APIs the type definitions mark `@deprecated`, such as `url.parse`, `util.isArray`, `fs.exists`,
+`crypto.fips`, `process.assert`, `require.extensions` and `new Buffer()`, are left to
+`typescript/no-deprecated`, so each API is reported once. Dropped members also fail type checking
+in typed code; this rule names their replacement and still reports them where the value is
+untyped. Each API is followed from `require()`, `process.getBuiltinModule()`, imports, `import()`
+and `export … from`, with or without the `node:` prefix, through aliases, destructuring, default
+values, assignments and `globalThis`. A deprecated module is reported wherever it is loaded or
+re-exported, but the deprecated members of a module that `export *` re-exports are not. Type-only
+imports and exports, shadowed or reassigned globals (`Buffer = class {}`), `util.debug`, which is
+now an alias of `util.debuglog`, and APIs whose deprecation Node.js revoked are not reported. It
+has no options and no fix.
+
+### `cstrlcs/prefer-modern-apis`
+
+Reports code that rebuilds a built-in.
+
+- `Array.from({ length: n }, () => value)` and `[...Array(n)].map(() => value)` where the
+  callback takes no parameters and returns a constant. `Array.from` is fixed to
+  `Array.from({ length: n }).fill(value)`. The spread form gets that fix only when `n` is a
+  non-negative integer literal, because `Array("3")` holds one element and `Array(1.5)` throws;
+  otherwise it is reported without a fix. Values built from calls, `new`, `this`, `arguments`,
+  updates, object, array and regex literals, `undefined` and identifiers bound to objects are
+  skipped, because they would change behavior or conflict with
+  `unicorn/no-array-fill-with-reference-type`.
+- `setTimeout` or `setInterval`, global or on `window` or `globalThis`, with `() => fn(args)` or
+  `fn.bind(null, args)` (or `undefined`), fixed to `setTimeout(fn, delay, args)`. The arrow form
+  is reported only when `fn` is a plain name and every argument is built from literals and
+  bindings that the file declares before the call (imports and function declarations count
+  anywhere) and never reassigns, so evaluating them early gives the same result. Undeclared names
+  are skipped.
+- A `try` block with a `catch` whose first statement is `new URL(...);` and that has at least one
+  more statement. A suggestion offers `URL.canParse(...)` only when there is no `finally`, and
+  then only in two shapes: `new URL(...); return true;` with a `catch` that only returns `false`
+  becomes `return URL.canParse(...);`, and any other block with a parameterless `catch` becomes
+  `if (URL.canParse(...)) { … } else { … }`.
+
+### React rules
+
+The `cstrlcs/react-*` rules check React code that no native Oxlint rule covers. They have no
+options. Every rule except `cstrlcs/react-no-leaked-text` runs only when `react` resolves from the
+linted file's nearest `package.json`, so a Vue or Solid project that reuses React's hook names is
+skipped, and `cstrlcs/react-no-legacy-apis` also reads the installed version. A React API call
+counts only when it traces back to `react` or `react-dom`: a named, aliased, default or namespace
+import, a `require`, a local alias of either, or an unbound `React`, `react` or `ReactDOM` global.
+A same-named function from another library or a parameter is skipped. `cstrlcs/react-naming` and
+`cstrlcs/react-no-leaked-effects` also accept an unbound hook name, such as `useRef()` with no
+import. `cstrlcs/react-no-leaked-text` looks only at JSX text, so it checks any JSX.
+
+- `cstrlcs/react-naming`: names that hide what a React value holds. A value from `createContext`
+  ends in `Context` (`CartContext`), a value from `useRef` is `ref` or ends in `Ref`, and a value
+  from `useId` is `id` or ends in `Id`. The name checked is where the value lands: a variable, an
+  assignment target (`cache.drawer = useRef()`), a class property or the innermost object key, also
+  through `?:`, `||`/`&&`/`??`, `await`, the last item of a comma expression and type assertions.
+  PascalCase for contexts is left to `cstrlcs/naming`. A function named `use` plus a capital letter
+  or digit (a declaration, a variable, an object or class member, or an assigned property) must call
+  a hook, that is any function named that way, counting calls in nested callbacks but not in nested
+  `use…` functions. Empty functions, overload signatures, `use`, `useMDXComponents` and factories
+  passed to `vi.mock`, `jest.mock` or `mock.module` are not reported.
+- `cstrlcs/react-no-leaked-effects`: a resource that `useEffect`, `useLayoutEffect` or
+  `useInsertionEffect` starts and its cleanup never releases. The cleanup is the function the
+  setup returns, including a named one, and any local function or method it calls.
+  `setTimeout`/`setInterval` ids must reach `clearTimeout`/`clearInterval`. `addEventListener`
+  needs a `removeEventListener` with the same target, type (a literal, or a `const` that holds
+  one), listener binding and `capture` flag, or an aborted `signal`. A `fetch` run by the effect
+  needs the `signal` of an `AbortController` the cleanup aborts, and a `ResizeObserver` or
+  `IntersectionObserver` must be disconnected, or each observed element unobserved. Targets
+  imported from `react-native`, effects whose setup is not a function literal, and
+  `useRef(new ResizeObserver())` are not checked.
+- `cstrlcs/react-no-leaked-text`: characters in JSX text that render by accident. A `$` right
+  before `{…}` is left over from a template literal (`<p>Hello ${user.name}</p>`), and a text node
+  that starts with `;` followed by a line break is left over from a statement, wherever that text
+  node sits (`<Cart />;`). A lone `$` before a single expression, such as `<span>${price}</span>`,
+  is treated as intended. Removal is a suggestion, not a fix, because it changes the rendered
+  text. Values leaked by `&&`, such as `{count && <Badge />}` rendering `0`, are left to the
+  type-aware `typescript/strict-boolean-expressions`.
+- `cstrlcs/react-no-legacy-apis`: APIs that the installed React version replaced, removed or
+  discourages, fixed when the rewrite is safe. From React 18, `ReactDOM.render` and
+  `ReactDOM.hydrate` become `createRoot(…).render(…)` and `hydrateRoot(…)` imported from
+  `react-dom/client`. From React 19, `forwardRef(…)` is unwrapped to read `ref` from props,
+  `<Context.Provider>` becomes `<Context>`, `useContext` becomes `use` and `useFormState` becomes
+  `useActionState`, while `flushSync` is reported without a fix and `createRef` is reported outside
+  class bodies. A `<…Context.Provider>` whose context cannot be traced is reported without a fix.
 
 ### Tailwind CSS rules
 
@@ -523,7 +728,7 @@ variable syntax) and rules that need project-specific options (restricted classe
 Sources live in `src/plugins/<plugin>/`, and `bun run build` bundles each plugin to
 `plugins/<plugin>.js` (Node does not strip types under `node_modules`, so the published plugin must
 be JavaScript). Rules use the `createOnce` API from `@oxlint/plugins`. Each rule has its own folder
-under `rules/<domain>/` (`code`, `tailwind` and `ui`) named after its id, holding `rule.ts`,
+under `rules/<domain>/` (`code`, `react`, `tailwind` and `ui`) named after its id, holding `rule.ts`,
 `rule.test.ts` and, when a test needs files, `fixtures/`; the plugin's `index.ts` derives each id
 from the camelCase name `rule.ts` exports. Modules shared by the rules of one domain live in
 `rules/<domain>/shared/`. Tailwind rules add an `analysis.ts` with the part that runs in the
@@ -574,3 +779,27 @@ The Tailwind CSS rules are a port of
 [Roger Schönbächler](https://github.com/schoero): its rule names, class extraction defaults,
 canonical-class attribution and conflict detection come from his work.
 Thank you for building it.
+
+The React rules port rules of
+[eslint-react](https://github.com/Rel1cx/eslint-react) by [REL1CX](https://github.com/Rel1cx).
+
+`cstrlcs/no-duplicated-logic`, `cstrlcs/no-useless-collections`, `cstrlcs/no-redundant-logic` and
+`cstrlcs/no-invariant-returns` are rewritten from rules of
+[SonarJS](https://github.com/SonarSource/SonarJS) by [SonarSource](https://github.com/SonarSource).
+
+`cstrlcs/no-trivial-functions`, `cstrlcs/no-trivial-type-aliases` and `cstrlcs/no-em-dash` port
+[eslint-plugin-slop](https://github.com/antfu/eslint-plugin-slop), and
+`cstrlcs/no-restricted-module-paths` ports rules of
+[eslint-plugin-antfu](https://github.com/antfu/eslint-plugin-antfu), both by
+[Anthony Fu](https://github.com/antfu).
+
+`cstrlcs/sort-specifiers` ports the sorting rules of
+[eslint-plugin-perfectionist](https://github.com/azat-io/eslint-plugin-perfectionist) by
+[Azat S.](https://github.com/azat-io).
+
+`cstrlcs/no-deprecated-node-apis` ports `no-deprecated-api` from
+[eslint-plugin-n](https://github.com/eslint-community/eslint-plugin-n), created by
+[Toru Nagashima](https://github.com/mysticatea) and maintained by the
+[ESLint Community](https://github.com/eslint-community), and `cstrlcs/prefer-modern-apis` ports
+rules of [@e18e/eslint-plugin](https://github.com/e18e/eslint-plugin) by
+[James Garbutt](https://github.com/43081j).

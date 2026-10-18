@@ -1,6 +1,6 @@
-import { REQUIRED_DEPENDENCIES, addDependencies } from "./package-manager.ts";
+import { addDependencies, REQUIRED_DEPENDENCIES } from "./package-manager.ts";
 import { loadProject } from "./project.ts";
-import { managedFiles, checkBunRuntime, repair } from "./requirements.ts";
+import { checkBunRuntime, managedFiles, repair } from "./requirements.ts";
 import { exitCodeOf, isInteractive, print, printManualFix, run } from "./terminal.ts";
 
 function bulletList(items: readonly string[]) {

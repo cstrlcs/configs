@@ -1,0 +1,187 @@
+import { RuleTester } from "oxlint/plugins-dev";
+
+import { noUselessCollections } from "./rule.ts";
+
+new RuleTester({ languageOptions: { parserOptions: { lang: "ts" }, sourceType: "module" } }).run(
+  "no-useless-collections",
+  noUselessCollections,
+  {
+    invalid: [
+      {
+        code: 'slots[1] = "morning";\nslots[1] = "evening";',
+        errors: [{ data: { key: "1", line: 1 }, line: 2, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'config["mode"] = "strict";\nconfig["mode"] = "loose";',
+        errors: [{ data: { key: "mode", line: 1 }, line: 2, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'slots[0] = "08:00";\nslots[3] = "11:00";\nslots[0] = "09:00";',
+        errors: [{ data: { key: "0", line: 1 }, line: 3, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'this.headers[0] = "Accept";\nthis.headers[0] = pick(this.defaults);',
+        errors: [{ data: { key: "0", line: 1 }, line: 2, messageId: "overwrittenElement" }],
+      },
+      {
+        code: "for (let row = 0; row < height; row += 1) {\n  grid[row] = blank;\n  grid[row] = filled;\n}",
+        errors: [{ data: { key: "row", line: 2 }, line: 3, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'labels[""] = "none";\nlabels[""] = "empty";',
+        errors: [{ data: { key: "", line: 1 }, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'scores[7] = 80;\nscores["7"] = 95;',
+        errors: [{ data: { key: "7", line: 1 }, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'function applyDefaults(target) {\n  target["locale"] = "en";\n  target["locale"] = detectLocale();\n}',
+        errors: [{ data: { key: "locale", line: 2 }, line: 3, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'prefs.set("theme", "dark");\nprefs.set("theme", "light");\nprefs.clear();\nprefs.set("theme", "dark");',
+        errors: [{ data: { key: "theme", line: 1 }, line: 2, messageId: "overwrittenElement" }],
+      },
+      {
+        code: "routes.set(path, renderHome);\nroutes.set(path, renderAbout);",
+        errors: [{ data: { key: "path", line: 1 }, line: 2, messageId: "overwrittenElement" }],
+      },
+      {
+        code: "tags.add(10);\ntags.add(20);\ntags.add(30);\ntags.add(20);\ntags.clear();\ntags.add(20);",
+        errors: [{ data: { key: "20", line: 2 }, line: 4, messageId: "overwrittenElement" }],
+      },
+      {
+        code: 'switch (shape) {\n  case "square":\n    sides[0] = 4;\n    sides[0] = 5;\n    break;\n  case "triangle":\n    sides[1] = 3;\n    sides[1] = 6;\n    break;\n}',
+        errors: [
+          { data: { key: "0", line: 3 }, line: 4, messageId: "overwrittenElement" },
+          { data: { key: "1", line: 7 }, line: 8, messageId: "overwrittenElement" },
+        ],
+      },
+      {
+        code: "function mergeQueue() {\n  const pending: Job[] = [];\n\n  return pending.concat(incoming);\n}",
+        errors: [{ data: { name: "pending" }, messageId: "emptyCollection" }],
+      },
+      {
+        code: "const retries: number[] = [];\n\nexport function lastRetry() {\n  report(retries[0]);\n  report(retries[0]);\n}",
+        errors: [
+          { data: { name: "retries" }, column: 9, line: 4, messageId: "emptyCollection" },
+          { data: { name: "retries" }, line: 5, messageId: "emptyCollection" },
+        ],
+      },
+      {
+        code: "const files: string[] = [];\n\nfor (const file of files) {\n  upload(file);\n}\nfor (const position in files) {\n  mark(position);\n}\nfiles.forEach((file) => upload(file));\nfiles[Symbol.iterator]();",
+        errors: [
+          { data: { name: "files" }, messageId: "emptyCollection" },
+          { data: { name: "files" }, messageId: "emptyCollection" },
+          { data: { name: "files" }, messageId: "emptyCollection" },
+          { data: { name: "files" }, messageId: "emptyCollection" },
+        ],
+      },
+      {
+        code: "function audit() {\n  const entries = new Array();\n  const steps = Array();\n  const owners = new Map();\n  const visited = new Set();\n\n  entries.forEach((entry) => inspect(entry));\n  steps.map((step) => inspect(step));\n  owners.get(account);\n  visited.has(account);\n}",
+        errors: [
+          { data: { name: "entries" }, messageId: "emptyCollection" },
+          { data: { name: "steps" }, messageId: "emptyCollection" },
+          { data: { name: "owners" }, messageId: "emptyCollection" },
+          { data: { name: "visited" }, messageId: "emptyCollection" },
+        ],
+      },
+      {
+        code: "function bump() {\n  const counters: number[] = [];\n\n  counters[3] += 1;\n  return counters[3];\n}",
+        errors: [
+          { data: { name: "counters" }, messageId: "emptyCollection" },
+          { data: { name: "counters" }, messageId: "emptyCollection" },
+        ],
+      },
+      {
+        code: "function render() {\n  let cells: Cell[];\n\n  cells = [];\n  cells.forEach((cell) => paint(cell));\n}",
+        errors: [{ data: { name: "cells" }, messageId: "emptyCollection" }],
+      },
+      {
+        code: 'function caption() {\n  const words = [] as string[];\n\n  return words.join(" ");\n}',
+        errors: [{ data: { name: "words" }, messageId: "emptyCollection" }],
+      },
+      {
+        code: "function buffer() {\n  let chunks = [header, footer];\n\n  chunks.push(body);\n  chunks = [];\n  chunks[0] = header;\n  chunks[1] += footer;\n  chunks.pop();\n  chunks.reverse();\n}",
+        errors: [{ data: { name: "chunks" }, column: 6, line: 2, messageId: "unusedCollection" }],
+      },
+      ...[
+        "let batch = new Array();\n\n  batch[0] = order;",
+        "let batch = Array();\n\n  batch[2] = order;",
+        "let batch: Order[];\n\n  batch = new Array();\n  batch[0] = order;",
+        "let batch;\n\n  batch = [];\n  batch.push(order);",
+        "let batch = new Map();\n\n  batch.set(order.id, order);\n  batch.clear();",
+        "let batch = new Set();\n\n  batch.add(order);\n  batch.delete(order);\n  batch = new Set();",
+        "let batch = new WeakSet();\n\n  batch.add(order);\n  batch.delete(order);",
+        "const batch: Order[] = [];\n\n  batch.unshift(order);",
+        "var batch = [],\n    flush = function () {\n      batch = [];\n    };\n\n  batch.push();",
+      ].map((body) => ({
+        code: `function collect(order) {\n  ${body}\n}`,
+        errors: [{ data: { name: "batch" }, line: 2, messageId: "unusedCollection" }],
+      })),
+    ],
+    valid: [
+      'slots[1] = "morning";\nslots[2] = "evening";',
+      'slots[1] = "morning";\nrooms[1] = "kitchen";',
+      'slots[1] = "morning";\nnotify(user);\nslots[1] = "evening";',
+      'slots[1] = "morning";\npersist(slots);\nslots[1] = "evening";',
+      'slots[1] = "morning";\nif (late) {\n  slots[1] = "evening";\n}',
+      "totals[3] = base;\ntotals[3] = totals[3] * rate;",
+      'this.headers[1] = "Accept";\nthis.headers[1] = merge(this.headers) + ", */*";',
+      'grid[row] = blank;\ngrid["row"] = filled;',
+      'ids.set(4, "four");\nids.set("4", "four");',
+      "visits.set(page, 1);\nvisits.set(page, visits.get(page) + 1);",
+      "chosen.add(left);\nchosen.add(right);",
+      "const draft = [0], final = [0];\n\ndraft[0] = 5;\nfinal[0] = draft[0];\ndraft[0] = 6;\npublish(draft, final);",
+      "let cursor = 0;\n\nframes[cursor++] = first;\nframes[cursor++] = second;\ncursor += 2;\nframes[cursor] = last;\ncursor += 2;\nframes[cursor] = last;",
+      'function weekdays() {\n  const names = ["Mon", "Tue", "Wed"];\n\n  show(names[1]);\n  names.forEach((name) => show(name));\n}',
+      "function queue() {\n  const jobs: Job[] = [];\n\n  jobs.push(next);\n  jobs.forEach((job) => run(job));\n}",
+      "function primes() {\n  const values = new Array(2, 3, 5);\n\n  values.forEach((value) => show(value));\n}",
+      "function first(rows: Row[]) {\n  return pick(rows[0]);\n}",
+      "function reread(rows: Row[]) {\n  show(rows[0]);\n  rows = [];\n  show(rows[0]);\n}",
+      "class Inbox {\n  messages: Message[] = [];\n\n  latest() {\n    return pick(this.messages[0]);\n  }\n}",
+      "function seed() {\n  const rows: Row[] = [];\n\n  hydrate(rows);\n  show(rows[0]);\n}",
+      "function swap() {\n  let rows = [];\n\n  rows = fetched;\n  show(rows[0]);\n}",
+      "function stream() {\n  const rows: Row[] = [];\n\n  subscribe((row) => rows.push(row));\n  show(rows[0]);\n}",
+      "function lazy() {\n  let rows: Row[] = [];\n\n  later(() => (rows = fetched));\n  show(rows[0]);\n}",
+      "function state() {\n  const rows: Row[] = [];\n\n  return { rows };\n}",
+      "function create() {\n  const rows: Row[] = [];\n\n  return rows;\n}",
+      "function share() {\n  const rows: Row[] = [];\n  const view = rows;\n\n  view.push(header);\n  show(rows[0]);\n  return view;\n}",
+      "function prefill() {\n  const rows: Row[] = [];\n\n  rows[0] = header;\n  return rows;\n}",
+      "function late() {\n  let rows!: Row[];\n\n  show(rows[0]);\n}",
+      "function fromSource(load: () => Row[]) {\n  const rows = load();\n\n  show(rows[0]);\n}",
+      "function fallback(cached: Row[]) {\n  const rows: Row[] = [];\n\n  show(cached || rows);\n}",
+      "function split(even: boolean) {\n  const left: Row[] = [];\n  const right: Row[] = [];\n\n  (even ? left : right).push(header);\n  show(left[0], right[0]);\n}",
+      "function unpack() {\n  const rows: Row[] = [];\n\n  [, rows[1]] = [header, footer];\n  show(rows[1]);\n}",
+      'import { rows } from "./table";\n\nshow(rows[0]);',
+      "function hoisted() {\n  let rows = [];\n\n  seed();\n  rows.indexOf(header);\n\n  function seed() {\n    rows[0] = header;\n  }\n}",
+      "function replaced() {\n  let rows = [];\n\n  reload();\n  rows.indexOf(header);\n\n  function reload() {\n    rows = fetchRows();\n  }\n}",
+      "function legacy() {\n  show(arguments[0]);\n}",
+      "function orDefault() {\n  const rows = [];\n\n  rows[0] ||= header;\n  show(rows[0]);\n}",
+      "function nullish() {\n  const rows = [];\n\n  rows[0] ??= header;\n  show(rows[0]);\n}",
+      "export const rows: Row[] = [];\n\nshow(rows[0]);",
+      "const rows: Row[] = [];\n\nexport { rows };\nshow(rows[0]);",
+      "function idle() {\n  let sizes = [12, 16];\n}",
+      "function reset() {\n  let sizes = [];\n\n  sizes = [];\n}",
+      "function rebuild() {\n  let lookup = new Map();\n\n  lookup = new Map();\n}",
+      "function fresh() {\n  let sizes = [];\n\n  return sizes;\n}",
+      "function pickSize() {\n  let sizes = [12, 16], chosen: number;\n\n  chosen = sizes[1];\n}",
+      "function listKeys() {\n  let sizes = [12, 16];\n\n  for (let key in sizes) {\n    show(key);\n  }\n}",
+      "function extend() {\n  let sizes = [12, 16];\n\n  sizes = sizes.concat(20, 24);\n}",
+      "function preview() {\n  let sizes = [12, 16];\n\n  sizes.concat(20, 24);\n}",
+      "function record(sizes: number[]) {\n  sizes.push(20);\n}",
+      "function restart(sizes: number[]) {\n  sizes.push(20);\n  sizes = [];\n  sizes.push(24);\n}",
+      "function wrap() {\n  let holder = { sizes };\n\n  holder.sizes.push(20);\n  return holder;\n}",
+      "function adopt() {\n  let sizes = [12, 16];\n\n  sizes = DEFAULT_SIZES;\n  sizes.push(20);\n}",
+      "function pull() {\n  let { sizes } = { sizes: DEFAULT_SIZES };\n\n  sizes.push(20);\n}",
+      "function matrix() {\n  const rows = [[1, 0], [0, 1]];\n\n  for (const row of rows) {\n    row.push(0);\n  }\n  return rows;\n}",
+      "function encode(buffer: ArrayBuffer) {\n  let bytes = new Uint8Array(buffer);\n\n  bytes[0] = 255;\n}",
+      "function nest() {\n  var sections = [], section;\n\n  sections.push(section = []);\n  section.push(paragraph);\n  return sections;\n}",
+      "export const sizes = [];\n\nsizes.push(20);",
+      "function count() {\n  const sizes = [];\n\n  return sizes.push(20);\n}",
+      { code: "var sizes = [];\n\nsizes.push(20);", languageOptions: { sourceType: "script" } },
+      "function toggle() {\n  const task = { done: false };\n  const tasks = [task];\n\n  tasks[0].done = true;\n}",
+    ],
+  },
+);

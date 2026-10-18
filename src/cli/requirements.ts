@@ -6,14 +6,14 @@ import { semver } from "bun";
 import { check, expectation, json, manual, write } from "./check.ts";
 import { isDirectory, readJson, readText, scanGlob, stripDotSlash, writeFiles } from "./files.ts";
 import {
-  EMPTY_OBJECT,
   declaredDependencyVersion,
   dependencies,
+  EMPTY_OBJECT,
   isJsonObject,
   objectField,
   stringField,
 } from "./json.ts";
-import { CONFIGS_DIR, REQUIRED_DEPENDENCIES, readPeers } from "./package-manager.ts";
+import { CONFIGS_DIR, readPeers, REQUIRED_DEPENDENCIES } from "./package-manager.ts";
 import { packageDirs } from "./project.ts";
 import { tsconfigRequirement } from "./tsconfig-requirement.ts";
 
@@ -29,15 +29,6 @@ const GITATTRIBUTES = `* text=auto
 *.gif binary
 *.webp binary
 *.ico binary`;
-
-const EDITORCONFIG = `root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-indent_size = 2
-indent_style = space
-insert_final_newline = true`;
 
 const REQUIRED_GITIGNORE = [
   ".env",
@@ -72,6 +63,7 @@ const CONFLICTING_CONFIGS = [
   "biome.json",
   "biome.jsonc",
   ".oxlintrc.json",
+  ".editorconfig",
   "*.code-workspace",
 ];
 
@@ -232,7 +224,9 @@ const gitignoreRequirement: Requirement = {
 };
 
 async function presetFor({ root, dirs }: Project) {
-  const manifests = await Promise.all(dirs.map((dir) => readJson(root, `${dir}/package.json`)));
+  const manifests = await Promise.all(
+    dirs.map(async (dir) => readJson(root, `${dir}/package.json`)),
+  );
 
   const projectDependencies = new Set(
     manifests.flatMap((manifest) => Object.keys(dependencies(manifest))),
@@ -367,7 +361,7 @@ function vscodeFileRequirement(name: string) {
 
 async function conflictingConfigsIn(root: string, dir: string) {
   const matches = await Promise.all(
-    CONFLICTING_CONFIGS.flatMap((name) => [name, `.vscode/${name}`]).map((pattern) =>
+    CONFLICTING_CONFIGS.flatMap((name) => [name, `.vscode/${name}`]).map(async (pattern) =>
       scanGlob(pattern, { cwd: `${root}/${dir}`, dot: true, onlyFiles: false }),
     ),
   );
@@ -386,7 +380,7 @@ const conflictingConfigsRequirement: Requirement = {
   files: [],
 
   inspect: async ({ root, dirs }) => {
-    const found = await Promise.all(dirs.map((dir) => conflictingConfigsIn(root, dir)));
+    const found = await Promise.all(dirs.map(async (dir) => conflictingConfigsIn(root, dir)));
     const conflicting = found.flat();
 
     return [
@@ -448,7 +442,6 @@ const requirements: readonly Requirement[] = [
   packageJsonRequirement,
   workspacesRequirement,
   exactFileRequirement(".gitattributes", GITATTRIBUTES),
-  exactFileRequirement(".editorconfig", EDITORCONFIG),
   gitignoreRequirement,
   tsconfigRequirement,
   toolConfigRequirement("oxlint", presetFor, oxlintConfig),

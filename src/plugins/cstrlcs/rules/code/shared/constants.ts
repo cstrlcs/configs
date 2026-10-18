@@ -18,6 +18,29 @@ export function unwrap(node: ESTree.Expression) {
   return current;
 }
 
+export function isPlainLiteral(
+  node: ESTree.Node | null | undefined,
+): node is
+  | ESTree.BigIntLiteral
+  | ESTree.BooleanLiteral
+  | ESTree.NullLiteral
+  | ESTree.NumericLiteral
+  | ESTree.StringLiteral {
+  return node?.type === "Literal" && !("regex" in node);
+}
+
+function plainTemplate({ expressions, quasis }: ESTree.TemplateLiteral) {
+  return expressions.length === 0 ? (quasis[0]?.value.cooked ?? undefined) : undefined;
+}
+
+export function staticString(node: ESTree.Node | null | undefined) {
+  if (node?.type === "TemplateLiteral") {
+    return plainTemplate(node);
+  }
+
+  return node?.type === "Literal" && typeof node.value === "string" ? node.value : undefined;
+}
+
 function elementChildren({ elements }: ESTree.ArrayExpression) {
   return elements.map((element) => {
     if (element?.type === "SpreadElement") {

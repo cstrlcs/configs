@@ -1,12 +1,11 @@
 import type { VisitorKeys } from "./ast.ts";
+import type { FunctionNode } from "./functions.ts";
 import type { ESTree } from "@oxlint/plugins";
 
 import { children } from "./ast.ts";
 import { unwrap } from "./constants.ts";
 
-type FunctionNode = ESTree.ArrowFunctionExpression | ESTree.Function;
-
-const COMPARISON_OPERATORS = new Set([
+export const COMPARISON_OPERATORS = new Set([
   "!=",
   "!==",
   "<",
@@ -158,6 +157,14 @@ export function isBooleanExpression(node: ESTree.Expression) {
 
 export function isNonBooleanExpression(node: ESTree.Expression) {
   return leaves(node).every((leaf) => isNonBooleanLeaf(leaf));
+}
+
+export function returnedBoolean(statement: ESTree.Statement | undefined) {
+  if (statement?.type !== "ReturnStatement" || statement.argument?.type !== "Literal") {
+    return;
+  }
+
+  return typeof statement.argument.value === "boolean" ? statement.argument.value : undefined;
 }
 
 export function returnedExpressions(keys: VisitorKeys, { body }: FunctionNode) {

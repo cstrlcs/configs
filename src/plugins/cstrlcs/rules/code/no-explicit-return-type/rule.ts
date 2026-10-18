@@ -1,7 +1,5 @@
-import type { ESTree } from "@oxlint/plugins";
+import type { FunctionNode } from "../shared/functions.ts";
 import { defineRule } from "@oxlint/plugins";
-
-type FunctionNode = ESTree.ArrowFunctionExpression | ESTree.Function;
 
 export const noExplicitReturnType = defineRule({
   meta: {

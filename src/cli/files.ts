@@ -14,7 +14,7 @@ export async function scanGlob(pattern: string, options: Bun.GlobScanOptions) {
   }
 }
 
-export function readText(root: string, relative: string) {
+export async function readText(root: string, relative: string) {
   return Bun.file(`${root}/${relative}`)
     .text()
     .catch(() => null);
@@ -36,6 +36,8 @@ export async function isDirectory(path: string) {
 
 export async function writeFiles(root: string, files: Readonly<Record<string, string>>) {
   await Promise.all(
-    Object.entries(files).map(([relative, content]) => Bun.write(`${root}/${relative}`, content)),
+    Object.entries(files).map(async ([relative, content]) =>
+      Bun.write(`${root}/${relative}`, content),
+    ),
   );
 }
