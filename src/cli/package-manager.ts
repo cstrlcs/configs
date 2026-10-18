@@ -15,13 +15,13 @@ export async function readPeers(root: string) {
 }
 
 export async function addDependencies(root: string, signal?: AbortSignal) {
-  await run(["bun", "add", "-D", "--exact", ...DIRECT_DEPENDENCIES], root, signal);
+  await run(["bun", "add", "-D", "--exact", ...DIRECT_DEPENDENCIES], root, { signal });
 
   const peers = await readPeers(root);
 
   await run(
     ["bun", "add", "-D", "--exact", ...peers.map(({ name, version }) => `${name}@${version}`)],
     root,
-    signal,
+    { signal },
   );
 }

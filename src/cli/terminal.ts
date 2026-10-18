@@ -26,16 +26,21 @@ export function printManualFix(instructions: string | undefined) {
   print(`   → ${instructions}`);
 }
 
-export async function run(
+interface RunOptions {
+  readonly signal?: AbortSignal | undefined;
+  readonly stdout?: "inherit" | "ignore";
+}
+
+export async function exitCodeOf(
   command: readonly [string, ...string[]],
   cwd: string,
-  signal?: AbortSignal,
+  { signal, stdout = "inherit" }: RunOptions = {},
 ) {
   signal?.throwIfAborted();
 
   const child = Bun.spawn([...command], {
     cwd,
-    stdio: ["inherit", "inherit", "inherit"],
+    stdio: ["inherit", stdout, "inherit"],
     detached: process.platform !== "win32",
   });
 
@@ -60,10 +65,20 @@ export async function run(
 
     signal?.throwIfAborted();
 
-    if (exitCode !== 0) {
-      throw new Error(`${command.join(" ")} failed with exit code ${exitCode}`);
-    }
+    return exitCode;
   } finally {
     signal?.removeEventListener("abort", interrupt);
+  }
+}
+
+export async function run(
+  command: readonly [string, ...string[]],
+  cwd: string,
+  options?: RunOptions,
+) {
+  const exitCode = await exitCodeOf(command, cwd, options);
+
+  if (exitCode !== 0) {
+    throw new Error(`${command.join(" ")} failed with exit code ${exitCode}`);
   }
 }

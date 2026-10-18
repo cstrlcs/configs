@@ -42,10 +42,10 @@ insert_final_newline = true`;
 const REQUIRED_GITIGNORE = [
   ".env",
   ".env.*",
-  "!.env.example",
-  "node_modules",
+  "!.env*.example",
+  "node_modules/",
   ".DS_Store",
-  ".claude",
+  ".claude/",
 ];
 
 const DEPENDENCY_RULE = "cstrlcs/no-forbidden-dependencies";
@@ -207,8 +207,15 @@ const gitignoreRequirement: Requirement = {
 
   inspect: async ({ root }) => {
     const current = (await readText(root, ".gitignore")) ?? "";
-    const lines = new Set(current.split("\n"));
-    const missing = REQUIRED_GITIGNORE.filter((entry) => !lines.has(entry));
+
+    const patterns = new Set(
+      current.split("\n").map((line) => line.trimEnd().replace(/^\*\*\//, "")),
+    );
+
+    const missing = REQUIRED_GITIGNORE.filter(
+      (entry) => !patterns.has(entry) && !patterns.has(entry.replace(/\/$/, "")),
+    );
+
     const separator = current === "" || current.endsWith("\n") ? "" : "\n";
 
     return [

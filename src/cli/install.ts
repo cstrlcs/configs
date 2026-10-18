@@ -1,7 +1,7 @@
 import { REQUIRED_DEPENDENCIES, addDependencies } from "./package-manager.ts";
 import { loadProject } from "./project.ts";
 import { managedFiles, checkBunRuntime, repair } from "./requirements.ts";
-import { isInteractive, print, printManualFix, run } from "./terminal.ts";
+import { exitCodeOf, isInteractive, print, printManualFix, run } from "./terminal.ts";
 
 function bulletList(items: readonly string[]) {
   return items.map((item) => `  - ${item}`).join("\n");
@@ -44,9 +44,16 @@ export async function install(root: string, yes: boolean, signal?: AbortSignal) 
     printManualFix(unresolved.fix.kind === "manual" ? unresolved.fix.instructions : undefined);
   }
 
-  try {
-    await run(["bunx", "oxlint", "--type-aware", "--fix"], root, signal);
-  } finally {
-    await run(["bunx", "oxfmt"], root, signal);
+  const lintExitCode = await exitCodeOf(
+    ["bunx", "oxlint", "--type-aware", "--fix", "--silent"],
+    root,
+    { signal },
+  );
+
+  await run(["bunx", "oxfmt"], root, { signal, stdout: "ignore" });
+
+  if (lintExitCode !== 0) {
+    print("⚠️  oxlint --fix left issues it could not fix");
+    printManualFix('Run "bun run lint" to see them');
   }
 }

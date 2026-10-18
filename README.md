@@ -44,6 +44,7 @@ This will:
 - Copy `.vscode/settings.json` and `.vscode/extensions.json`
 - Warn about conflicting tool configs it finds, and when `cstrlcs/no-forbidden-dependencies` has no
   rules
+- Run `oxlint --fix` and `oxfmt` without printing their output, and warn when lint issues remain
 
 ## Doctor
 
@@ -61,8 +62,9 @@ This verifies:
   every `apps/*` package
 - `.gitattributes`, `.editorconfig`, `.vscode/settings.json` and `.vscode/extensions.json` match the
   shipped versions exactly
-- `.gitignore` contains `.env`, `.env.*`, `!.env.example`, `node_modules`, `.DS_Store` and
-  `.claude`
+- `.gitignore` contains `.env`, `.env.*`, `!.env*.example`, `node_modules/`, `.DS_Store` and
+  `.claude/`, written as is or with a `**/` prefix, and `node_modules` and `.claude` also without
+  the trailing slash
 - `tsconfig.json` extends the expected preset and Bun test globals are set up
 - `oxlint.config.ts` imports the expected preset and `oxfmt.config.ts` imports the base preset
 - `cstrlcs/no-forbidden-dependencies` is declared in `oxlint.config.ts`. Declared without rules it
