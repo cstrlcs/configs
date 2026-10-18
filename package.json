@@ -1,6 +1,6 @@
 {
   "name": "@cstrlcs/configs",
-  "version": "10.2.0",
+  "version": "11.0.0",
   "description": "Strict configurations for Oxlint/Oxfmt and TypeScript.",
   "keywords": [
     "configs",
