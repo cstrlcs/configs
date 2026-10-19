@@ -30,19 +30,18 @@ export function printManualFix(instructions: string | undefined) {
 
 interface RunOptions {
   readonly signal?: AbortSignal | undefined;
-  readonly stdout?: "inherit" | "ignore";
 }
 
 export async function exitCodeOf(
   command: readonly [string, ...string[]],
   cwd: string,
-  { signal, stdout = "inherit" }: RunOptions = {},
+  { signal }: RunOptions = {},
 ) {
   signal?.throwIfAborted();
 
   const child = Bun.spawn([...command], {
     cwd,
-    stdio: ["inherit", stdout, "inherit"],
+    stdio: ["inherit", "inherit", "inherit"],
     detached: process.platform !== "win32",
   });
 

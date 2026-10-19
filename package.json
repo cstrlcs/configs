@@ -38,10 +38,8 @@
   "scripts": {
     "build": "bun ./src/generators/plugins.ts && bun ./src/generators/oxfmt.ts && bun ./src/generators/oxlint.ts && oxfmt oxfmt/* oxlint/* plugins/*",
     "release": "publi.sh",
-    "check": "bun run lint && bun run format:check && tsc --noEmit && bun run test",
-    "format:check": "oxfmt --check",
-    "lint": "oxlint --type-aware .",
-    "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s",
+    "lint": "oxlint --type-aware . && oxfmt --check && tsc --noEmit && bun run test",
+    "lint:fix": "oxlint --type-aware --fix; oxfmt; bun run lint",
     "test": "vitest run"
   },
   "dependencies": {
@@ -51,14 +49,14 @@
     "@oxlint/plugins": "1.80.0",
     "@types/bun": "1.4.0",
     "tailwindcss": "4.3.3",
-    "typescript": "7.0.2",
     "vitest": "5.0.2",
     "zod": "4.5.1"
   },
   "peerDependencies": {
     "oxfmt": "0.65.0",
     "oxlint": "1.80.0",
-    "oxlint-tsgolint": "7.0.2001"
+    "oxlint-tsgolint": "7.0.2001",
+    "typescript": "7.0.2"
   },
   "engines": {
     "bun": ">=1.4.0"

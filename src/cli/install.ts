@@ -1,7 +1,40 @@
 import { addDependencies, REQUIRED_DEPENDENCIES } from "./package-manager.ts";
 import { loadProject } from "./project.ts";
 import { checkBunRuntime, managedFiles, repair } from "./requirements.ts";
-import { exitCodeOf, isInteractive, print, printManualFix, run } from "./terminal.ts";
+import { isInteractive, print, printManualFix } from "./terminal.ts";
+
+async function committedEnvFiles(root: string) {
+  if (Bun.which("git") === null) {
+    return [];
+  }
+
+  const git = Bun.spawn(
+    [
+      "git",
+      "log",
+      "--all",
+      "--diff-filter=A",
+      "--name-only",
+      "--format=",
+      "--",
+      ":(glob)**/.env",
+      ":(glob)**/.env.*",
+    ],
+    { cwd: root, stderr: "ignore" },
+  );
+
+  const [output, exitCode] = await Promise.all([git.stdout.text(), git.exited]);
+
+  if (exitCode !== 0) {
+    return [];
+  }
+
+  const files = output
+    .split("\n")
+    .filter((file) => file !== "" && !/\.env[^/]*\.example$/u.test(file));
+
+  return [...new Set(files)];
+}
 
 function bulletList(items: readonly string[]) {
   return items.map((item) => `  - ${item}`).join("\n");
@@ -44,16 +77,15 @@ export async function install(root: string, yes: boolean, signal?: AbortSignal) 
     printManualFix(unresolved.fix.kind === "manual" ? unresolved.fix.instructions : undefined);
   }
 
-  const lintExitCode = await exitCodeOf(
-    ["bunx", "oxlint", "--type-aware", "--fix", "--silent"],
-    root,
-    { signal },
-  );
+  const committed = await committedEnvFiles(root);
 
-  await run(["bunx", "oxfmt"], root, { signal, stdout: "ignore" });
+  if (committed.length > 0) {
+    print(`⚠️  .env files in git history: ${committed.join(" ")}`);
 
-  if (lintExitCode !== 0) {
-    print("⚠️  oxlint --fix left issues it could not fix");
-    printManualFix('Run "bun run lint" to see them');
+    printManualFix(
+      "Rotate the secrets these files held, then remove them from every commit with 'git filter-repo --invert-paths --path <file>'",
+    );
   }
+
+  print("✅ Installed. Run 'bun run lint:fix' to fix and check the project.");
 }

@@ -5,13 +5,16 @@ import { doctor } from "./doctor.ts";
 import { isDirectory, readJson } from "./files.ts";
 import { install } from "./install.ts";
 import { stringField } from "./json.ts";
+import { lint } from "./lint.ts";
 import { print } from "./terminal.ts";
 
-const HELP = `Usage: cstrlcs-configs <install|doctor> [options]
+const HELP = `Usage: cstrlcs-configs <install|doctor|lint|fix> [options]
 
 Commands:
   install          Add the dependencies and configuration files
   doctor           Check that the project is configured correctly
+  lint             Run doctor, check lint, formatting and types, and run the tests
+  fix              Run doctor, fix lint and formatting, check types, and run the tests
 
 Options:
   --cwd, -c <dir>   Project directory (defaults to the current directory)
@@ -22,11 +25,16 @@ Options:
 function parseCommand(positionals: readonly string[], yes: boolean) {
   const [command] = positionals;
 
-  if (positionals.length !== 1 || (command !== "install" && command !== "doctor")) {
-    throw new Error("Expected one command: install or doctor. Run with --help for usage.");
+  if (
+    positionals.length !== 1 ||
+    (command !== "install" && command !== "doctor" && command !== "lint" && command !== "fix")
+  ) {
+    throw new Error(
+      "Expected one command: install, doctor, lint or fix. Run with --help for usage.",
+    );
   }
 
-  if (command === "doctor" && yes) {
+  if (command !== "install" && yes) {
     throw new Error("--yes is only available for install.");
   }
 
@@ -70,7 +78,15 @@ export async function cli(args: readonly string[], root: string, signal?: AbortS
 
   if (command === "install") {
     await install(cwd, values.yes, signal);
-  } else {
-    await doctor(cwd);
+
+    return;
   }
+
+  if (command === "doctor") {
+    await doctor(cwd);
+
+    return;
+  }
+
+  await lint(cwd, command === "fix", signal);
 }

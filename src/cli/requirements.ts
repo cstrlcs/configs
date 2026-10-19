@@ -18,8 +18,8 @@ import { packageDirs } from "./project.ts";
 import { tsconfigRequirement } from "./tsconfig-requirement.ts";
 
 const SUPPORTED_BUN_RANGE = ">=1.4.0";
-const LINT_SCRIPT = "oxlint --type-aware .";
-const LINT_FIX_SCRIPT = "oxlint --type-aware --fix; s=$?; oxfmt; exit $s";
+const LINT_SCRIPT = "cstrlcs-configs lint";
+const LINT_FIX_SCRIPT = "cstrlcs-configs fix";
 
 const GITATTRIBUTES = `* text=auto
 *.* text eol=lf
@@ -30,23 +30,15 @@ const GITATTRIBUTES = `* text=auto
 *.webp binary
 *.ico binary`;
 
-const REQUIRED_GITIGNORE = [
-  ".env",
-  ".env.*",
-  "!.env*.example",
-  "node_modules/",
-  ".DS_Store",
-  ".claude/",
-];
-
+const ENV_GITIGNORE = [".env", ".env.*", "!.env*.example"];
+const REQUIRED_GITIGNORE = ["node_modules/", ".DS_Store", ".claude/"];
 const DEPENDENCY_RULE = "cstrlcs/no-forbidden-dependencies";
 const GENERATED_DEPENDENCY_RULES = ["error"];
 const dependencyRuleDeclaration = `"${DEPENDENCY_RULE}": ${JSON.stringify(GENERATED_DEPENDENCY_RULES)}`;
 
 const oxlintConfig = `{
-  ...config,
+  extends: [config],
   rules: {
-    ...config.rules,
     ${dependencyRuleDeclaration},
   },
 }`;
@@ -197,14 +189,21 @@ function exactFileRequirement(path: string, expected: string) {
 const gitignoreRequirement: Requirement = {
   files: [".gitignore"],
 
-  inspect: async ({ root }) => {
+  inspect: async ({ root, dirs }) => {
     const current = (await readText(root, ".gitignore")) ?? "";
+
+    const envFiles = await Promise.all(
+      dirs.map(async (dir) => scanGlob("{.env,.env.*}", { cwd: `${root}/${dir}`, dot: true })),
+    );
+
+    const required =
+      envFiles.flat().length > 0 ? [...ENV_GITIGNORE, ...REQUIRED_GITIGNORE] : REQUIRED_GITIGNORE;
 
     const patterns = new Set(
       current.split("\n").map((line) => line.trimEnd().replace(/^\*\*\//, "")),
     );
 
-    const missing = REQUIRED_GITIGNORE.filter(
+    const missing = required.filter(
       (entry) => !patterns.has(entry) && !patterns.has(entry.replace(/\/$/, "")),
     );
 

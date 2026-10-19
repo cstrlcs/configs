@@ -5,7 +5,14 @@ import { run } from "./terminal.ts";
 const DIRECT_DEPENDENCIES = ["@cstrlcs/configs", "@types/bun"];
 
 export const CONFIGS_DIR = "node_modules/@cstrlcs/configs";
-export const REQUIRED_DEPENDENCIES = [...DIRECT_DEPENDENCIES, "oxlint", "oxlint-tsgolint", "oxfmt"];
+
+export const REQUIRED_DEPENDENCIES = [
+  ...DIRECT_DEPENDENCIES,
+  "oxlint",
+  "oxlint-tsgolint",
+  "oxfmt",
+  "typescript",
+];
 
 export async function readPeers(root: string) {
   const configsPackage = await readJson(root, `${CONFIGS_DIR}/package.json`);

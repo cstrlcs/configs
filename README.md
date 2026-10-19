@@ -24,13 +24,13 @@ bunx @cstrlcs/configs install
 
 Use `--cwd <dir>` (or `-c`) to target another project. In CI or other non-interactive sessions,
 pass `--yes` (or `-y`) to skip confirmation. Run with `--help` or `--version` for usage or version
-information. The CLI supports `install` and `doctor`; wizard mode, shell completions and log-level
-flags are not provided.
+information. The CLI supports `install`, `doctor`, `lint` and `fix`; wizard mode, shell completions
+and log-level flags are not provided.
 
 This will:
 
-- Install `@cstrlcs/configs` and `@types/bun`, plus `oxlint`, `oxlint-tsgolint`, and `oxfmt` at the
-  exact versions in `peerDependencies`, all as exact-pinned dev dependencies
+- Install `@cstrlcs/configs` and `@types/bun`, plus `oxlint`, `oxlint-tsgolint`, `oxfmt` and
+  `typescript` at the exact versions in `peerDependencies`, all as exact-pinned dev dependencies
 - Set `packageManager` in `package.json` to the running Bun version and `type` to `"module"`, and
   default `name` to the directory name and `private` to `true` when they are missing
 - Create `oxlint.config.ts` with the preset that matches the project (`vue`, `react` or `base`) and
@@ -44,7 +44,28 @@ This will:
 - Copy `.vscode/settings.json` and `.vscode/extensions.json`
 - Warn about conflicting tool configs it finds, and when `cstrlcs/no-forbidden-dependencies` has no
   rules
-- Run `oxlint --fix` and `oxfmt` without printing their output, and warn when lint issues remain
+- Warn when a `.env` or `.env.*` file other than `.env*.example` was ever committed, in any branch
+  of the git history. From then on the `.gitignore` entries keep new ones out
+
+The installer does not lint or format the project. Run `bun run lint:fix` afterwards.
+
+## Lint and fix
+
+```bash
+bunx @cstrlcs/configs lint
+bunx @cstrlcs/configs fix
+```
+
+Both commands run [`doctor`](#doctor) first and stop when it fails. `lint` then runs
+`oxlint --type-aware .` and `oxfmt --check`, and `fix` runs `oxlint --type-aware --fix` and
+`oxfmt`. Both then run `tsc --noEmit -p <dir>` in the root and in every workspace that has a
+`tsconfig.json`, and `bun run test` when
+`package.json` has a `test` script. Every step runs even when an earlier one fails, and the command
+fails when any step does.
+
+`oxlint`, `oxfmt` and `tsc` are resolved from the project's `node_modules` with `oxc-resolver`, so
+they always run at the versions the project installed. When one is missing the command fails
+instead of falling back to another copy.
 
 ## Doctor
 
@@ -62,8 +83,9 @@ This verifies:
   every `apps/*` package
 - `.gitattributes`, `.vscode/settings.json` and `.vscode/extensions.json` match the shipped versions
   exactly
-- `.gitignore` contains `.env`, `.env.*`, `!.env*.example`, `node_modules/`, `.DS_Store` and
-  `.claude/`, written as is or with a `**/` prefix, and `node_modules` and `.claude` also without
+- `.gitignore` contains `node_modules/`, `.DS_Store` and `.claude/`, plus `.env`, `.env.*` and
+  `!.env*.example` when a `.env` or `.env.*` file exists in the root or in any workspace, written as is or
+  with a `**/` prefix, and `node_modules` and `.claude` also without
   the trailing slash
 - `tsconfig.json` extends the expected preset and Bun test globals are set up
 - `oxlint.config.ts` imports the expected preset and `oxfmt.config.ts` imports the base preset
@@ -74,7 +96,7 @@ This verifies:
 - No ESLint, Prettier, Biome, `.oxlintrc.json`, `.editorconfig` or `*.code-workspace` config exists
   in the root or in any workspace, and no workspace has its own `.vscode/settings.json`
 - All required packages are declared, `@cstrlcs/configs` is pinned to an exact version, and
-  `oxlint`, `oxlint-tsgolint` and `oxfmt` are declared and installed at the exact
+  `oxlint`, `oxlint-tsgolint`, `oxfmt` and `typescript` are declared and installed at the exact
   `peerDependencies` versions
 
 The oxlint preset is `vue` when `vue` is a dependency of the root or of any workspace, otherwise
@@ -93,7 +115,12 @@ bun add -D --exact $(jq -r '.peerDependencies | to_entries[] | "\(.key)@\(.value
 import { defineConfig } from "oxlint";
 import config from "@cstrlcs/configs/oxlint/base.js";
 
-export default defineConfig(config);
+export default defineConfig({
+  extends: [config],
+  rules: {
+    "cstrlcs/no-forbidden-dependencies": ["error"],
+  },
+});
 ```
 
 `oxfmt.config.ts`:
@@ -133,8 +160,8 @@ export {};
   "type": "module",
   "packageManager": "bun@1.4.0",
   "scripts": {
-    "lint": "oxlint --type-aware .",
-    "lint:fix": "oxlint --type-aware --fix; s=$?; oxfmt; exit $s"
+    "lint": "cstrlcs-configs lint",
+    "lint:fix": "cstrlcs-configs fix"
   }
 }
 ```
@@ -293,9 +320,8 @@ import config from "@cstrlcs/configs/oxlint/base.js";
 const MODULES = "^src/modules";
 
 export default defineConfig({
-  ...config,
+  extends: [config],
   rules: {
-    ...config.rules,
     "cstrlcs/no-forbidden-dependencies": [
       "error",
       {
@@ -752,6 +778,8 @@ presets. New, removed, renamed, duplicate, or overlapping rules fail the build, 
 rules from plugins not currently used by any preset. Update the enabled or disabled lists
 when upgrading Oxlint. Rule options and file overrides remain in `src/generators/oxlint.ts`.
 Presets disable automatic category activation and enable only declared rules.
+Presets set `env`, `globals`, `settings` and `ignorePatterns` only inside overrides, because
+Oxlint's `extends` does not inherit them from the top level of an extended config.
 
 The CI builds and checks lint, formatting, types, tests, and package contents on pull requests
 and pushes to `main`. The package check runs [publint](https://publint.dev) in strict mode,
