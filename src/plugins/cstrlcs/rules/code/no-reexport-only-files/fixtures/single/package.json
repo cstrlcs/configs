@@ -1,0 +1,5 @@
+{
+  "name": "single",
+  "bin": "./bin/single.mjs",
+  "exports": "./index.js"
+}

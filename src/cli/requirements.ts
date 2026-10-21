@@ -14,7 +14,7 @@ import {
   stringField,
 } from "./json.ts";
 import { CONFIGS_DIR, readPeers, REQUIRED_DEPENDENCIES } from "./package-manager.ts";
-import { packageDirs } from "./project.ts";
+import { isLibrary, packageDirs, projectDependencies } from "./project.ts";
 import { tsconfigRequirement } from "./tsconfig-requirement.ts";
 
 const SUPPORTED_BUN_RANGE = ">=1.4.0";
@@ -35,14 +35,9 @@ const REQUIRED_GITIGNORE = ["node_modules/", ".DS_Store", ".claude/"];
 const DEPENDENCY_RULE = "cstrlcs/no-forbidden-dependencies";
 const GENERATED_DEPENDENCY_RULES = ["error"];
 const dependencyRuleDeclaration = `"${DEPENDENCY_RULE}": ${JSON.stringify(GENERATED_DEPENDENCY_RULES)}`;
-
-const oxlintConfig = `{
-  extends: [config],
-  rules: {
-    ${dependencyRuleDeclaration},
-  },
-}`;
-
+const AGENTS_FILE = "AGENTS.md";
+const AGENTS_BEGIN = "<!-- BEGIN @cstrlcs/configs -->";
+const AGENTS_END = "<!-- END @cstrlcs/configs -->";
 const DEPENDENCY_RULES_HELP = `Map this project's source folders and the direction imports may flow between them, then add one entry per forbidden direction to the "${DEPENDENCY_RULE}" options in oxlint.config.ts. The option format and an example are under "${DEPENDENCY_RULE}" in ${CONFIGS_DIR}/README.md. Leave it with no entries and ignore this warning when the project has no boundaries worth enforcing, such as a small project with a single source folder.`;
 
 const CONFLICTING_CONFIGS = [
@@ -222,26 +217,22 @@ const gitignoreRequirement: Requirement = {
   },
 };
 
-async function presetFor({ root, dirs }: Project) {
-  const manifests = await Promise.all(
-    dirs.map(async (dir) => readJson(root, `${dir}/package.json`)),
-  );
+async function presetFor(project: Project) {
+  const used = await projectDependencies(project);
 
-  const projectDependencies = new Set(
-    manifests.flatMap((manifest) => Object.keys(dependencies(manifest))),
-  );
-
-  if (projectDependencies.has("vue")) {
+  if (used.has("vue")) {
     return "vue";
   }
 
-  return projectDependencies.has("react") ? "react" : "base";
+  return used.has("react") ? "react" : "base";
 }
+
+type PresetImports = Readonly<Record<string, string>>;
 
 function toolConfigRequirement(
   tool: string,
-  presetOf: (project: Project) => string | Promise<string>,
-  exported = "config",
+  importsOf: (project: Project) => PresetImports | Promise<PresetImports>,
+  exported: (names: readonly string[]) => string,
 ) {
   const path = `${tool}.config.ts`;
 
@@ -249,30 +240,57 @@ function toolConfigRequirement(
     files: [path],
 
     inspect: async (project) => {
-      const [preset, content] = await Promise.all([
-        presetOf(project),
+      const [imports, content] = await Promise.all([
+        importsOf(project),
         readText(project.root, path),
       ]);
 
-      const specifier = `"@cstrlcs/configs/${tool}/${preset}.js"`;
+      const specifiers = Object.values(imports).map(
+        (preset) => `"@cstrlcs/configs/${tool}/${preset}.js"`,
+      );
+
+      const found = new Set(content?.match(new RegExp(`"@cstrlcs/configs/${tool}/[^"]+"`, "gu")));
 
       return [
         check({
-          passed: content?.includes(specifier) === true,
+          passed:
+            found.size === specifiers.length &&
+            specifiers.every((specifier) => found.has(specifier)),
           label: path,
-          detail: `expected import: ${specifier}`,
+          detail: `expected imports: ${specifiers.join(", ")}`,
           fix: write({
             [path]: `import { defineConfig } from "${tool}";
 
-import config from ${specifier};
+${Object.entries(imports)
+  .map(([name, preset]) => `import ${name} from "@cstrlcs/configs/${tool}/${preset}.js";`)
+  .join("\n")}
 
-export default defineConfig(${exported});
+export default defineConfig(${exported(Object.keys(imports))});
 `,
           }),
         }),
       ];
     },
   } satisfies Requirement;
+}
+
+async function oxlintImports(project: Project) {
+  const config = await presetFor(project);
+
+  if (!isLibrary(project.packageJson)) {
+    return { config };
+  }
+
+  return { config, library: "library" };
+}
+
+function oxlintConfig(names: readonly string[]) {
+  return `{
+  extends: [${names.join(", ")}],
+  rules: {
+    ${dependencyRuleDeclaration},
+  },
+}`;
 }
 
 async function readDependencyRules(root: string) {
@@ -375,6 +393,65 @@ async function conflictingConfigsIn(root: string, dir: string) {
   return files;
 }
 
+function agentsBlockFix(current: string | null, block: string) {
+  if (current === null || current === "") {
+    return write({ [AGENTS_FILE]: `${block}\n` });
+  }
+
+  const begin = current.indexOf(AGENTS_BEGIN);
+  const end = current.indexOf(AGENTS_END, begin);
+
+  if (begin === -1 && !current.includes(AGENTS_END)) {
+    return write({ [AGENTS_FILE]: `${current.replace(/\n*$/u, "\n\n")}${block}\n` });
+  }
+
+  if (begin === -1 || end === -1) {
+    return manual(
+      `Remove the unmatched ${AGENTS_BEGIN} or ${AGENTS_END} marker from ${AGENTS_FILE}`,
+    );
+  }
+
+  return write({
+    [AGENTS_FILE]: `${current.slice(0, begin)}${block}${current.slice(end + AGENTS_END.length)}`,
+  });
+}
+
+const agentsBlockRequirement: Requirement = {
+  files: [AGENTS_FILE],
+
+  inspect: async ({ root }) => {
+    const label = `${AGENTS_FILE} @cstrlcs/configs block`;
+
+    const [shipped, current] = await Promise.all([
+      readText(root, `${CONFIGS_DIR}/agents/${AGENTS_FILE}`),
+      readText(root, AGENTS_FILE),
+    ]);
+
+    if (shipped === null) {
+      return [
+        check({
+          passed: false,
+          label,
+          detail: `the shipped agents/${AGENTS_FILE} is missing`,
+          fix: manual(`Reinstall @cstrlcs/configs: its agents/${AGENTS_FILE} is missing`),
+        }),
+      ];
+    }
+
+    const block = `${AGENTS_BEGIN}\n\n${shipped.trim()}\n\n${AGENTS_END}`;
+
+    return [
+      check({
+        passed: current?.includes(block) === true,
+        label,
+        detail:
+          current?.includes(AGENTS_BEGIN) === true ? "differs from the shipped content" : "missing",
+        fix: agentsBlockFix(current, block),
+      }),
+    ];
+  },
+};
+
 const conflictingConfigsRequirement: Requirement = {
   files: [],
 
@@ -400,8 +477,9 @@ const INSTALL_DEPENDENCIES: Fix = { kind: "install-dependencies" };
 const dependenciesRequirement: Requirement = {
   files: [],
 
-  inspect: async ({ root, packageJson }) => {
-    const peers = await readPeers(root);
+  inspect: async (project) => {
+    const { root, packageJson } = project;
+    const peers = await readPeers(project);
 
     const peerChecks = await Promise.all(
       peers.map(async ({ name, version }) => {
@@ -443,11 +521,16 @@ const requirements: readonly Requirement[] = [
   exactFileRequirement(".gitattributes", GITATTRIBUTES),
   gitignoreRequirement,
   tsconfigRequirement,
-  toolConfigRequirement("oxlint", presetFor, oxlintConfig),
+  toolConfigRequirement("oxlint", oxlintImports, oxlintConfig),
   dependencyRulesRequirement,
-  toolConfigRequirement("oxfmt", () => "base"),
+  toolConfigRequirement(
+    "oxfmt",
+    () => ({ config: "base" }),
+    () => "config",
+  ),
   vscodeFileRequirement("settings.json"),
   vscodeFileRequirement("extensions.json"),
+  agentsBlockRequirement,
   conflictingConfigsRequirement,
   dependenciesRequirement,
 ];

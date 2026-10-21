@@ -7,7 +7,13 @@ import { objectField, stringField } from "./json.ts";
 import { loadProject } from "./project.ts";
 import { exitCodeOf } from "./terminal.ts";
 
-const PACKAGES = { oxlint: "oxlint", oxfmt: "oxfmt", tsc: "typescript" } as const;
+const PACKAGES = {
+  oxlint: "oxlint",
+  oxfmt: "oxfmt",
+  knip: "knip",
+  sherif: "sherif",
+  tsc: "typescript",
+} as const;
 
 type Tool = keyof typeof PACKAGES;
 
@@ -19,14 +25,16 @@ interface Step {
 const LINT_STEPS: readonly (readonly [Tool, ...string[]])[] = [
   ["oxlint", "--type-aware", "."],
   ["oxfmt", "--check"],
+  ["knip"],
 ];
 
 const FIX_STEPS: readonly (readonly [Tool, ...string[]])[] = [
   ["oxlint", "--type-aware", "--fix"],
   ["oxfmt"],
+  ["knip"],
 ];
 
-const resolver = new ResolverFactory();
+const resolver = new ResolverFactory({ exportsFields: [] });
 
 async function binPath(root: string, tool: Tool) {
   const name = PACKAGES[tool];
@@ -45,14 +53,20 @@ async function binPath(root: string, tool: Tool) {
 export async function lint(root: string, fix: boolean, signal?: AbortSignal) {
   await doctor(root);
 
+  const { dirs, packageJson, workspacePatterns } = await loadProject(root);
+  const toolSteps = [...(fix ? FIX_STEPS : LINT_STEPS)];
+
+  if (workspacePatterns.length > 0) {
+    toolSteps.push(["sherif"]);
+  }
+
   const steps: Step[] = await Promise.all(
-    (fix ? FIX_STEPS : LINT_STEPS).map(async ([tool, ...args]) => ({
+    toolSteps.map(async ([tool, ...args]) => ({
       label: tool,
       command: ["node", await binPath(root, tool), ...args],
     })),
   );
 
-  const { dirs, packageJson } = await loadProject(root);
   const tsc = await binPath(root, "tsc");
 
   const tsconfigs = await Promise.all(

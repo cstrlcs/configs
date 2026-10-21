@@ -1,8 +1,8 @@
 import type { JsonObject } from "./json.ts";
 import { Glob } from "bun";
 
-import { readText, scanGlob, stripDotSlash } from "./files.ts";
-import { decodeJsonObject, EMPTY_OBJECT, isJsonObject } from "./json.ts";
+import { readJson, readText, scanGlob, stripDotSlash } from "./files.ts";
+import { decodeJsonObject, dependencies, EMPTY_OBJECT, isJsonObject } from "./json.ts";
 
 export interface Project {
   readonly root: string;
@@ -18,6 +18,10 @@ function readWorkspacePatterns(packageJson: JsonObject) {
   return Array.isArray(patterns)
     ? patterns.filter((pattern): pattern is string => typeof pattern === "string")
     : [];
+}
+
+export function isLibrary(packageJson: JsonObject) {
+  return packageJson["private"] === false;
 }
 
 export async function packageDirs(root: string, pattern: string) {
@@ -72,4 +76,12 @@ export async function loadProject(root: string) {
     workspacePatterns,
     dirs: [".", ...workspaces],
   } satisfies Project;
+}
+
+export async function projectDependencies({ root, dirs }: Project) {
+  const manifests = await Promise.all(
+    dirs.map(async (dir) => readJson(root, `${dir}/package.json`)),
+  );
+
+  return new Set(manifests.flatMap((manifest) => Object.keys(dependencies(manifest))));
 }

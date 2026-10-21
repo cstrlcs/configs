@@ -1,19 +1,9 @@
 import process from "node:process";
 
-const AUTOMATION_ENVIRONMENT_VARIABLES = [
-  "CI",
-  "CLAUDECODE",
-  "CURSOR_AGENT",
-  "CODEX_CI",
-  "OPENCODE",
-  "AMP_HOME",
-];
+import { isAutomated } from "./env.ts";
 
 export function isInteractive() {
-  return (
-    process.stdin.isTTY &&
-    AUTOMATION_ENVIRONMENT_VARIABLES.every((name) => Bun.env[name] === undefined)
-  );
+  return process.stdin.isTTY && !isAutomated;
 }
 
 export function print(line = "") {

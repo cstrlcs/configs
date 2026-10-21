@@ -50,6 +50,7 @@ export default defineConfig({
       files: ["src/plugins/cstrlcs/index.ts"],
       rules: {
         "import/max-dependencies": "off",
+        "import/no-default-export": "off",
       },
     },
     {

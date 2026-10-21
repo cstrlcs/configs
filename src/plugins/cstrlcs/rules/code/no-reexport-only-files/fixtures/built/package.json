@@ -1,0 +1,10 @@
+{
+  "name": "built",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./utils": {
+      "import": "./build/utils/index.mjs"
+    }
+  }
+}

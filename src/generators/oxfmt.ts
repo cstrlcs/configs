@@ -6,6 +6,7 @@ const config = defineConfig({
   ignorePatterns: [],
   tabWidth: 2,
   useTabs: false,
+  astro: true,
   sortTailwindcss: {
     functions: ["clsx", "cn", "cva", "cx", "tv", "twJoin", "twMerge"],
   },

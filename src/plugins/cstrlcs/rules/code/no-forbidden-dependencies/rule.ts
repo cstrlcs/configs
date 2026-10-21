@@ -1,4 +1,5 @@
 import type { Options, Ranged, RuleOptionsSchema } from "@oxlint/plugins";
+import path from "node:path";
 import { defineRule } from "@oxlint/plugins";
 import { ResolverFactory } from "oxc-resolver";
 
@@ -15,7 +16,8 @@ interface DependencyRule {
   readonly name: string;
   readonly comment: string | undefined;
   readonly from: PathCondition;
-  readonly to: PathCondition;
+  readonly target: PathCondition;
+  readonly allowList: boolean;
 }
 
 const PATTERN: Schema = {
@@ -31,13 +33,15 @@ const CONDITION: Schema = {
 const DEPENDENCY_RULES_SCHEMA: Schema = {
   items: {
     additionalProperties: false,
+    oneOf: [{ required: ["to"] }, { required: ["allow"] }],
     properties: {
+      allow: CONDITION,
       comment: { type: "string" },
       from: CONDITION,
       name: { type: "string" },
       to: CONDITION,
     },
-    required: ["name", "to"],
+    required: ["name"],
     type: "object",
   },
   type: "array",
@@ -77,13 +81,14 @@ function toCondition(value: Json | undefined) {
 }
 
 function toRule(value: JsonRecord) {
-  const { comment, from, name, to } = value;
+  const { allow, comment, from, name, to } = value;
 
   return {
+    allowList: allow !== undefined,
     comment: typeof comment === "string" ? comment : undefined,
     from: toCondition(from),
     name: typeof name === "string" ? name : "",
-    to: toCondition(to),
+    target: toCondition(allow ?? to),
   };
 }
 
@@ -94,17 +99,17 @@ function parseDependencyRules(options: Readonly<Options>) {
 }
 
 function matchFrom(rule: DependencyRule, file: string) {
-  const { path, pathNot } = rule.from;
+  const { path: pattern, pathNot } = rule.from;
 
   if (pathNot !== undefined && toRegExp(pathNot).test(file)) {
     return;
   }
 
-  if (path === undefined) {
+  if (pattern === undefined) {
     return [];
   }
 
-  const match = toRegExp(path).exec(file);
+  const match = toRegExp(pattern).exec(file);
 
   return match === null ? undefined : [...match];
 }
@@ -115,12 +120,12 @@ function withGroups(source: string | undefined, groups: readonly string[]) {
   );
 }
 
-function matchTo(rule: DependencyRule, groups: readonly string[], target: string) {
-  const path = withGroups(rule.to.path, groups);
-  const pathNot = withGroups(rule.to.pathNot, groups);
+function matchTarget(rule: DependencyRule, groups: readonly string[], target: string) {
+  const pattern = withGroups(rule.target.path, groups);
+  const pathNot = withGroups(rule.target.pathNot, groups);
 
   return (
-    (path === undefined || toRegExp(path).test(target)) &&
+    (pattern === undefined || toRegExp(pattern).test(target)) &&
     (pathNot === undefined || !toRegExp(pathNot).test(target))
   );
 }
@@ -148,8 +153,29 @@ function toRelativePath(cwd: string, filePath: string) {
   return posixPath.startsWith(`${posixCwd}/`) ? posixPath.slice(posixCwd.length + 1) : posixPath;
 }
 
+const BUN_STORE = /(?<=(?:^|\/)node_modules\/)\.bun\/[^\/]+\/node_modules\//gv;
+const PACKAGE_SPECIFIER = /^(?:@[a-z0-9][\w.\-]*\/)?[a-z0-9][\w.\-]*(?:\/|$)/iv;
+
 function resolveSpecifier(importer: string, specifier: string) {
-  return resolver.resolveFileSync(importer, specifier).path ?? specifier;
+  const { builtin, path: resolved } = resolver.resolveFileSync(importer, specifier);
+
+  if (resolved !== undefined) {
+    return toPosix(resolved).replaceAll(BUN_STORE, "");
+  }
+
+  if (builtin !== undefined) {
+    return builtin.resolved;
+  }
+
+  if (PACKAGE_SPECIFIER.test(specifier)) {
+    return `node_modules/${specifier}/`;
+  }
+
+  if (specifier.startsWith(".") || path.isAbsolute(specifier)) {
+    return path.resolve(path.dirname(importer), specifier);
+  }
+
+  return specifier;
 }
 
 interface ActiveRule {
@@ -170,6 +196,7 @@ export const noForbiddenDependencies = defineRule({
     docs: { description: "Forbid dependencies between modules based on their resolved paths." },
     messages: {
       forbidden: 'Dependency on "{{to}}" is forbidden by "{{name}}".{{comment}}',
+      notAllowed: 'Dependency on "{{to}}" is not allowed by "{{name}}".{{comment}}',
     },
     schema: DEPENDENCY_RULES_SCHEMA,
     type: "problem",
@@ -181,12 +208,12 @@ export const noForbiddenDependencies = defineRule({
       const target = toRelativePath(context.cwd, resolveSpecifier(context.filename, specifier));
 
       for (const { rule, groups } of activeRules) {
-        if (matchTo(rule, groups, target)) {
+        if (matchTarget(rule, groups, target) !== rule.allowList) {
           const comment = rule.comment === undefined ? "" : ` ${rule.comment}`;
 
           context.report({
             data: { comment, name: rule.name, to: target },
-            messageId: "forbidden",
+            messageId: rule.allowList ? "notAllowed" : "forbidden",
             node,
           });
         }

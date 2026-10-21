@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "dependencies": {
+    "expo": "^56.0.0",
+    "react": "^19.2.0",
+    "react-native": "^0.85.0"
+  }
+}

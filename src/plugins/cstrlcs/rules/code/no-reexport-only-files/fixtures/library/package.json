@@ -1,0 +1,25 @@
+{
+  "name": "library",
+  "bin": {
+    "library": "./src/cli.ts"
+  },
+  "main": "./src/main.cjs",
+  "module": "./src/module.mjs",
+  "types": "./src/types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": null
+    },
+    "./server": {
+      "node": {
+        "import": "./src/server/index.ts"
+      }
+    },
+    "./client": [
+      "./src/client.mjs",
+      "./src/client-fallback.cjs"
+    ]
+  }
+}

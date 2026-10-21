@@ -195,78 +195,6 @@ new RuleTester(projectOf("react-app")).run("react-no-leaked-effects", reactNoLea
       errors: [{ messageId: "eventListener" }],
     },
     {
-      code: 'useEffect(() => { fetch("/api/user"); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { window.fetch("/api/user", {}); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useInsertionEffect(() => { (fetch as any)("/api/user"); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { signal: ctrl.signal }); return null; }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: "useEffect(() => { for (const id of ids) { fetch(id); } }, []);",
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const ctrl = new AbortController(); const signal = "cache"; fetch("/api/user", { [signal]: ctrl.signal }); return () => ctrl.abort(); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const ctrl = new AbortController(); const options = { signal: ctrl.signal } as RequestInit; fetch("/api/user", options); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { ...defaults, signal: ctrl.signal as AbortSignal }); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const a = new AbortController(); const b = new AbortController(); fetch("/a", { signal: a.signal }); fetch("/b", { signal: b.signal }); return () => a.abort(); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const a = new AbortController(); const b = new AbortController(); fetch("/a", { signal: a.signal }); return () => (b as AbortController).abort(); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { signal: ctrl.signal }); setTimeout(() => ctrl.abort(), 5000); }, []);',
-      errors: [{ messageId: "fetch" }, { messageId: "timeout" }],
-    },
-    {
-      code: 'useEffect(() => fetch("/api/user"), []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const s = getExternalSignal(); const signal = s; fetch("/api/user", { signal }); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { let a = b; let b = a; fetch("/api/user", { signal: b }); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const request = { signal: getExternalSignal() }; const s = request.signal; fetch("/api/user", { signal: s }); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { signal: ctrl.signal }); }, []);\nuseEffect(() => { const ctrl = new AbortController(); return () => ctrl.abort(); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { (async () => { setUser(await (await fetch("/api/user")).json()); })(); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
-      code: 'useEffect(() => { async function load() { await fetch("/api/user"); } void load(); }, []);',
-      errors: [{ messageId: "fetch" }],
-    },
-    {
       code: "useEffect(() => { new IntersectionObserver(onChange); }, []);",
       errors: [{ messageId: "intersectionObserver" }],
     },
@@ -388,26 +316,6 @@ new RuleTester(projectOf("react-app")).run("react-no-leaked-effects", reactNoLea
     'useEffectOnce(() => { addEventListener("resize", onResize); });',
     'const setup = () => addEventListener("resize", onResize); useEffect(setup, []);',
     'class Example extends Component { componentDidMount() { document.addEventListener("click", this.onClick); } }',
-    'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { signal: ctrl.signal }); return () => ctrl.abort(); }, []);',
-    'useLayoutEffect(() => { const ctrl = new AbortController(); globalThis.fetch("/api/user", { signal: ctrl.signal! }); return () => (ctrl as AbortController).abort(); }, []);',
-    'useEffect(() => { const ctrl = new AbortController(); const s = ctrl?.signal; const options = { signal: s } as RequestInit; fetch("/api/user", options); return () => ctrl.abort(); }, []);',
-    'const ctrl = new AbortController(); const s = ctrl.signal; useEffect(() => { const signal = s; fetch("/api/user", { signal }); return () => ctrl.abort(); }, []);',
-    'useEffect(() => { const ctrl = new AbortController(); const signal = ctrl.signal; { const signal = other.signal; } fetch("/api/user", { signal }); return () => ctrl.abort(); }, []);',
-    'useEffect(() => { const ctrl = new AbortController(); let s = ctrl.signal; s = other.signal; fetch("/api/user", { signal: s }); return () => ctrl.abort(); }, []);',
-    'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { ...defaults, signal: ctrl.signal }); return function cleanup() { ctrl.abort(); }; }, []);',
-    "useEffect(() => { const ctrl = new AbortController(); for (const id of ids) fetch(id, { signal: ctrl.signal }); return () => ctrl.abort(); }, []);",
-    'useEffect(() => { const a = new AbortController(); const b = new AbortController(); fetch("/a", { signal: a.signal }); fetch("/b", { signal: b.signal }); return () => { a.abort(); b.abort(); }; }, []);',
-    'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { signal: ctrl.signal }); return () => { Promise.resolve().then(() => ctrl.abort()); }; }, []);',
-    'useEffect(() => { const ctrl = new AbortController(); fetch("/api/user", { signal: ctrl.signal }); return () => { function abort() { ctrl.abort(); } abort(); }; }, []);',
-    'useEffect(() => { fetch("/api/user", { signal: getController().signal }); return () => getController().abort(); }, []);',
-    'useEffect((signal) => { const s = signal; fetch("/api/user", { signal: s }); }, []);',
-    'function useUser(options) { useEffect(() => { fetch("/api/user", { signal: options.signal }); }, [options]); }',
-    'useEffect(() => { const onClick = () => fetch("/api/user"); return () => {}; }, []);',
-    "useEffect(() => { ids.forEach((id) => fetch(id)); return () => {}; }, []);",
-    'function load() { return fetch("/api/user"); } useEffect(() => { load(); }, []);',
-    'useEffect(() => () => { fetch("/api/unsubscribe"); }, []);',
-    'const ctrl = new AbortController(); useEffect(() => { fetch("/api/user", { signal: ctrl.signal }); }, []);\nuseEffect(() => () => ctrl.abort(), []);',
-    'fetch("/api/user"); useEffect(() => {}, [fetch("/api/user")]);',
     "useEffect(() => { const observer = new IntersectionObserver(onChange); observer.observe(document.body); return () => observer.disconnect(); }, []);",
     "useEffect(() => { const observer = new IntersectionObserver(onChange); observer.observe(document.body as HTMLElement); return () => observer.unobserve(document.body); }, []);",
     "useEffect(() => { const observer = new IntersectionObserver(onChange) as IntersectionObserver; observer.observe(document.body); observer.observe(element!); return () => { observer.unobserve(document.body); observer.unobserve(element!); }; }, []);",

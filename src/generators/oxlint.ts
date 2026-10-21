@@ -33,10 +33,8 @@ const ENABLED_RULES: readonly string[] = [
   "eslint/max-classes-per-file",
   "eslint/max-depth",
   "eslint/max-lines",
-  "eslint/max-lines-per-function",
   "eslint/max-nested-callbacks",
   "eslint/max-params",
-  "eslint/max-statements",
   "eslint/new-cap",
   "eslint/no-array-constructor",
   "eslint/no-async-promise-executor",
@@ -192,6 +190,7 @@ const ENABLED_RULES: readonly string[] = [
   "import/no-anonymous-default-export",
   "import/no-commonjs",
   "import/no-cycle",
+  "import/no-default-export",
   "import/no-duplicates",
   "import/no-dynamic-require",
   "import/no-empty-named-blocks",
@@ -739,6 +738,8 @@ const DISABLED_RULES: readonly string[] = [
   "eslint/capitalized-comments",
   "eslint/id-match",
   "eslint/init-declarations",
+  "eslint/max-lines-per-function",
+  "eslint/max-statements",
   "eslint/no-alert",
   "eslint/no-duplicate-imports",
   "eslint/no-eq-null",
@@ -755,7 +756,6 @@ const DISABLED_RULES: readonly string[] = [
   "eslint/sort-keys",
   "import/exports-last",
   "import/group-exports",
-  "import/no-default-export",
   "import/no-named-export",
   "import/no-nodejs-modules",
   "import/no-relative-parent-imports",
@@ -1101,7 +1101,7 @@ const BUN_VI_METHOD_RESTRICTIONS = {
 };
 
 const RULE_OVERRIDES: Record<string, RuleConfiguration> = {
-  "eslint/complexity": ["error", 8],
+  "eslint/complexity": ["error", 12],
   "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
   "eslint/no-void": ["error", { allowAsStatement: true }],
   "eslint/no-console": ["error", { allow: ["error", "warn"] }],
@@ -1113,10 +1113,8 @@ const RULE_OVERRIDES: Record<string, RuleConfiguration> = {
   "eslint/id-length": ["error", { checkGeneric: false, exceptions: ["_"], properties: "never" }],
   "eslint/max-depth": ["error", 3],
   "eslint/max-lines": ["error", { max: 500, skipBlankLines: true, skipComments: true }],
-  "eslint/max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: true }],
   "eslint/max-nested-callbacks": ["error", 3],
   "eslint/max-params": ["error", 3],
-  "eslint/max-statements": ["error", 25],
   "eslint/new-cap": ["error", { capIsNewExceptionPattern: "^[A-Z][\\w$]*\\.[A-Z]" }],
   "eslint/no-restricted-exports": [
     "error",
@@ -1236,7 +1234,7 @@ const RULE_OVERRIDES: Record<string, RuleConfiguration> = {
   "unicorn/no-array-reduce": ["error", { allowSimpleOperations: false }],
   "unicorn/no-array-reverse": ["error", { allowExpressionStatement: false }],
   "unicorn/no-array-sort": ["error", { allowAfterSpread: false, allowExpressionStatement: false }],
-  "typescript/parameter-properties": ["error", { prefer: "parameter-property" }],
+  "typescript/parameter-properties": ["error", { prefer: "class-property" }],
   "import/no-unassigned-import": ["error", { allow: ["**/*.css"] }],
   "import/no-namespace": ["error", { ignore: ["@stylexjs/stylex"] }],
   "vitest/consistent-each-for": ["error", { describe: "each", it: "each", test: "each" }],
@@ -1274,6 +1272,27 @@ const JSX_FILES = ["**/*.jsx", "**/*.tsx"];
 const DECLARATION_FILES = ["**/*.d.ts", "**/*.d.cts", "**/*.d.mts"];
 const COMMONJS_CONFIG_FILES = ["**/*.config.js", "**/*.config.cjs", "**/.*rc.js", "**/.*rc.cjs"];
 const TEST_SUPPORT_FILES = ["**/tests/**", "**/__tests__/**", "**/test-utils.*"];
+
+const DEFAULT_EXPORT_FILES = [
+  ...DECLARATION_FILES,
+  "**/*.config.*",
+  "**/.*rc.*",
+  "**/.storybook/**",
+  "**/*.stories.*",
+  "**/app/**",
+  "**/pages/**",
+  "**/routes/**",
+  "**/root.*",
+  "**/entry.client.*",
+  "**/entry.server.*",
+  "**/middleware.*",
+  "**/proxy.*",
+  "**/instrumentation.*",
+  "**/server/api/**",
+  "**/server/routes/**",
+  "**/server/middleware/**",
+  "**/server/plugins/**",
+];
 
 const TEST_FILES = [
   "**/*.test.js",
@@ -1322,7 +1341,6 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
   {
     files: JSX_FILES,
     rules: {
-      "eslint/max-lines-per-function": "off",
       "import/max-dependencies": "off",
       "eslint/complexity": "off",
       "unicorn/filename-case": ["error", { case: "pascalCase" }],
@@ -1357,6 +1375,10 @@ const GLOBAL_OVERRIDES: ConfigOverride[] = [
   {
     files: TEST_SUPPORT_FILES,
     rules: { "react/only-export-components": "off" },
+  },
+  {
+    files: DEFAULT_EXPORT_FILES,
+    rules: { "import/no-default-export": "off" },
   },
   {
     files: TEST_FILES,
@@ -1406,23 +1428,30 @@ const CSTRLCS_RULES: Record<string, RuleConfiguration> = {
   "cstrlcs/name-after-property": "error",
   "cstrlcs/naming": "error",
   "cstrlcs/no-comments": "error",
+  "cstrlcs/no-cross-package-relative-import": "error",
   "cstrlcs/no-deprecated-node-apis": "error",
   "cstrlcs/no-duplicated-logic": "error",
   "cstrlcs/no-em-dash": "error",
+  "cstrlcs/no-env-access": "error",
   "cstrlcs/no-explicit-return-type": "error",
   "cstrlcs/no-export-assignment": "error",
   "cstrlcs/no-invariant-returns": "error",
   "cstrlcs/no-redundant-logic": "error",
+  "cstrlcs/no-reexport-only-files": "error",
   "cstrlcs/no-restricted-module-paths": "error",
+  "cstrlcs/no-test-code-in-production": "error",
   "cstrlcs/no-trivial-functions": "error",
   "cstrlcs/no-trivial-type-aliases": "error",
   "cstrlcs/no-useless-collections": "error",
   "cstrlcs/padding-between-statements": "error",
   "cstrlcs/prefer-modern-apis": "error",
+  "cstrlcs/react-native-no-deprecated-apis": "error",
   "cstrlcs/react-naming": "error",
+  "cstrlcs/react-no-fetch-in-effect": "error",
   "cstrlcs/react-no-leaked-effects": "error",
   "cstrlcs/react-no-leaked-text": "error",
   "cstrlcs/react-no-legacy-apis": "error",
+  "cstrlcs/react-no-mirrored-props": "error",
   "cstrlcs/sort-specifiers": "error",
   "cstrlcs/tailwind-canonical-classes": "error",
   "cstrlcs/tailwind-contrast": "error",
@@ -1441,6 +1470,15 @@ const CSTRLCS_RULES: Record<string, RuleConfiguration> = {
   "cstrlcs/ui-no-nested-interactive": "error",
   "cstrlcs/ui-pointer-events": "error",
   "cstrlcs/ui-zoomable": "error",
+};
+
+const LIBRARY_RULES: Record<string, RuleConfiguration> = {
+  "typescript/no-inferrable-types": "off",
+};
+
+const LIBRARY_CSTRLCS_RULES: Record<string, RuleConfiguration> = {
+  "cstrlcs/no-comments": ["error", { allowExportedDocs: true }],
+  "cstrlcs/no-explicit-return-type": "off",
 };
 
 const BASE_PLUGINS = [
@@ -1494,6 +1532,7 @@ validateRuleCatalog(availableRules);
 validateRuleReferences(availableRules, [
   ...Object.keys(RULE_OVERRIDES),
   ...Object.values(PRESET_RULES).flatMap((presetRules) => Object.keys(presetRules)),
+  ...Object.keys(LIBRARY_RULES),
   ...[...GLOBAL_OVERRIDES, ...Object.values(PRESET_OVERRIDES).flat()].flatMap((override) =>
     Object.keys(override.rules ?? {}),
   ),
@@ -1578,3 +1617,8 @@ await Promise.all(
     await writePreset("oxlint", preset, config);
   }),
 );
+
+await writePreset("oxlint", "library", {
+  jsPlugins: [CSTRLCS_PLUGIN],
+  rules: { ...LIBRARY_RULES, ...LIBRARY_CSTRLCS_RULES },
+});

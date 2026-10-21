@@ -1,4 +1,4 @@
-import { addDependencies, REQUIRED_DEPENDENCIES } from "./package-manager.ts";
+import { addDependencies, FRAMEWORK_PEERS, REQUIRED_DEPENDENCIES } from "./package-manager.ts";
 import { loadProject } from "./project.ts";
 import { checkBunRuntime, managedFiles, repair } from "./requirements.ts";
 import { isInteractive, print, printManualFix } from "./terminal.ts";
@@ -41,7 +41,10 @@ function bulletList(items: readonly string[]) {
 }
 
 const warning = `🚨 This script will add the following dependencies to your project:
-${bulletList(REQUIRED_DEPENDENCIES)}
+${bulletList([
+  ...REQUIRED_DEPENDENCIES,
+  ...[...FRAMEWORK_PEERS].map(([name, framework]) => `${name}, when ${framework} is a dependency`),
+])}
 
 It will also edit/overwrite the following files:
 ${bulletList(managedFiles)}
@@ -55,7 +58,8 @@ export async function install(root: string, yes: boolean, signal?: AbortSignal) 
     throw new Error(`${bunRuntime.description}\n   → ${bunRuntime.fix.instructions}`);
   }
 
-  await loadProject(root);
+  const project = await loadProject(root);
+
   print(warning);
 
   if (!yes) {
@@ -70,7 +74,7 @@ export async function install(root: string, yes: boolean, signal?: AbortSignal) 
     }
   }
 
-  await addDependencies(root, signal);
+  await addDependencies(project, signal);
 
   for (const unresolved of await repair(await loadProject(root), signal)) {
     print(`⚠️  ${unresolved.description}`);

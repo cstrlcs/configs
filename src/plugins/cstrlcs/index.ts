@@ -3,15 +3,19 @@ import { definePlugin } from "@oxlint/plugins";
 import { nameAfterProperty } from "./rules/code/name-after-property/rule.ts";
 import { naming } from "./rules/code/naming/rule.ts";
 import { noComments } from "./rules/code/no-comments/rule.ts";
+import { noCrossPackageRelativeImport } from "./rules/code/no-cross-package-relative-import/rule.ts";
 import { noDeprecatedNodeApis } from "./rules/code/no-deprecated-node-apis/rule.ts";
 import { noDuplicatedLogic } from "./rules/code/no-duplicated-logic/rule.ts";
 import { noEmDash } from "./rules/code/no-em-dash/rule.ts";
+import { noEnvAccess } from "./rules/code/no-env-access/rule.ts";
 import { noExplicitReturnType } from "./rules/code/no-explicit-return-type/rule.ts";
 import { noExportAssignment } from "./rules/code/no-export-assignment/rule.ts";
 import { noForbiddenDependencies } from "./rules/code/no-forbidden-dependencies/rule.ts";
 import { noInvariantReturns } from "./rules/code/no-invariant-returns/rule.ts";
 import { noRedundantLogic } from "./rules/code/no-redundant-logic/rule.ts";
+import { noReexportOnlyFiles } from "./rules/code/no-reexport-only-files/rule.ts";
 import { noRestrictedModulePaths } from "./rules/code/no-restricted-module-paths/rule.ts";
+import { noTestCodeInProduction } from "./rules/code/no-test-code-in-production/rule.ts";
 import { noTrivialFunctions } from "./rules/code/no-trivial-functions/rule.ts";
 import { noTrivialTypeAliases } from "./rules/code/no-trivial-type-aliases/rule.ts";
 import { noUselessCollections } from "./rules/code/no-useless-collections/rule.ts";
@@ -19,9 +23,12 @@ import { paddingBetweenStatements } from "./rules/code/padding-between-statement
 import { preferModernApis } from "./rules/code/prefer-modern-apis/rule.ts";
 import { sortSpecifiers } from "./rules/code/sort-specifiers/rule.ts";
 import { reactNaming } from "./rules/react/react-naming/rule.ts";
+import { reactNativeNoDeprecatedApis } from "./rules/react/react-native-no-deprecated-apis/rule.ts";
+import { reactNoFetchInEffect } from "./rules/react/react-no-fetch-in-effect/rule.ts";
 import { reactNoLeakedEffects } from "./rules/react/react-no-leaked-effects/rule.ts";
 import { reactNoLeakedText } from "./rules/react/react-no-leaked-text/rule.ts";
 import { reactNoLegacyApis } from "./rules/react/react-no-legacy-apis/rule.ts";
+import { reactNoMirroredProps } from "./rules/react/react-no-mirrored-props/rule.ts";
 import { tailwindCanonicalClasses } from "./rules/tailwind/tailwind-canonical-classes/rule.ts";
 import { tailwindContrast } from "./rules/tailwind/tailwind-contrast/rule.ts";
 import { tailwindDecoration } from "./rules/tailwind/tailwind-decoration/rule.ts";
@@ -47,24 +54,31 @@ export default definePlugin({
       nameAfterProperty,
       naming,
       noComments,
+      noCrossPackageRelativeImport,
       noDeprecatedNodeApis,
       noDuplicatedLogic,
       noEmDash,
+      noEnvAccess,
       noExplicitReturnType,
       noExportAssignment,
       noForbiddenDependencies,
       noInvariantReturns,
       noRedundantLogic,
+      noReexportOnlyFiles,
       noRestrictedModulePaths,
+      noTestCodeInProduction,
       noTrivialFunctions,
       noTrivialTypeAliases,
       noUselessCollections,
       paddingBetweenStatements,
       preferModernApis,
+      reactNativeNoDeprecatedApis,
       reactNaming,
+      reactNoFetchInEffect,
       reactNoLeakedEffects,
       reactNoLeakedText,
       reactNoLegacyApis,
+      reactNoMirroredProps,
       sortSpecifiers,
       tailwindCanonicalClasses,
       tailwindContrast,

@@ -1,0 +1,7 @@
+{
+  "name": "wildcard",
+  "exports": {
+    "./plugins/*": "./plugins/*",
+    "./icons/*": "./src/icons/*.js"
+  }
+}

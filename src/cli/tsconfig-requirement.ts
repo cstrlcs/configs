@@ -3,7 +3,8 @@ import type { JsonObject } from "./json.ts";
 
 import { check, json, write } from "./check.ts";
 import { readText } from "./files.ts";
-import { decodeJsonObject, dependencies, EMPTY_OBJECT, stringField } from "./json.ts";
+import { decodeJsonObject, dependencies } from "./json.ts";
+import { isLibrary } from "./project.ts";
 
 const TSCONFIG_FILE = "tsconfig.json";
 const BUN_DECLARATIONS_FILE = "bun.d.ts";
@@ -60,7 +61,11 @@ function withBunDeclarations(tsconfig: JsonObject) {
   return { ...tsconfig, [key]: [...others, BUN_DECLARATIONS_FILE] };
 }
 
-function fixedTsconfig(tsconfig: JsonObject | null, extendsPath: string, isVite: boolean) {
+function fixedTsconfig(
+  tsconfig: JsonObject | null,
+  extendsPath: string | readonly string[],
+  isVite: boolean,
+) {
   if (tsconfig === null) {
     return {
       extends: extendsPath,
@@ -89,17 +94,23 @@ export const tsconfigRequirement: Requirement = {
     ]);
 
     const isVite = Object.hasOwn(dependencies(packageJson), "vite");
-    const extendsPath = `@cstrlcs/configs/tsconfig/${isVite ? "vite" : "base"}.json`;
-    const extendsValue = stringField(tsconfig ?? EMPTY_OBJECT, "extends");
+    const preset = `@cstrlcs/configs/tsconfig/${isVite ? "vite" : "base"}.json`;
+
+    const extendsPath = isLibrary(packageJson)
+      ? [preset, "@cstrlcs/configs/tsconfig/library.json"]
+      : preset;
+
+    const expectedExtends = JSON.stringify(extendsPath);
+    const extendsValue = JSON.stringify(tsconfig?.["extends"] ?? "");
     const fixedTsconfigJson = json(fixedTsconfig(tsconfig, extendsPath, isVite));
     const includesDeclarations = tsconfig !== null && includesBunDeclarations(tsconfig);
     const hasReferences = hasBunReferences(declarations ?? "");
 
     return [
       check({
-        passed: extendsValue === extendsPath,
+        passed: extendsValue === expectedExtends,
         label: TSCONFIG_FILE,
-        detail: `expected extends: "${extendsPath}", got: "${extendsValue}"`,
+        detail: `expected extends: ${expectedExtends}, got: ${extendsValue}`,
         fix: write({ [TSCONFIG_FILE]: fixedTsconfigJson }),
       }),
       check({

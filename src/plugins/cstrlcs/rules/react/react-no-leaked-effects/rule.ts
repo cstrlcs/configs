@@ -2,8 +2,10 @@ import type { FunctionNode, Identifier } from "../shared/nodes.ts";
 import type { Context, Definition, ESTree, Variable } from "@oxlint/plugins";
 import { defineRule } from "@oxlint/plugins";
 
+import { effectSetupOf } from "../shared/effects.ts";
+import { isGlobalCall, isGlobalObject } from "../shared/globals.ts";
 import { calleeName, isFunctionNode, memberName, unwrap } from "../shared/nodes.ts";
-import { MAX_ALIAS_DEPTH, reactExportName } from "../shared/origin.ts";
+import { MAX_ALIAS_DEPTH } from "../shared/origin.ts";
 import { reactMajorVersion } from "../shared/project.ts";
 import { declaratorOf, definitionOf, variableOf } from "../shared/scope.ts";
 
@@ -25,7 +27,6 @@ type Tracker = ReturnType<typeof emptyTracker>;
 
 const RESOURCES = new Map([
   ["addEventListener", { messageId: "eventListener", release: "removeEventListener" }],
-  ["fetch", { messageId: "fetch", release: "abort" }],
   ["IntersectionObserver", { messageId: "intersectionObserver", release: "disconnect" }],
   ["ResizeObserver", { messageId: "resizeObserver", release: "disconnect" }],
   ["setInterval", { messageId: "interval", release: "clearInterval" }],
@@ -34,12 +35,11 @@ const RESOURCES = new Map([
 
 const releaseMethods = new Set([
   ...[...RESOURCES.values()].map(({ release }) => release),
+  "abort",
   "observe",
   "unobserve",
 ]);
 
-const EFFECT_HOOKS = new Set(["useEffect", "useInsertionEffect", "useLayoutEffect"]);
-const GLOBAL_OBJECTS = new Set(["global", "globalThis", "self", "window"]);
 const OBSERVERS = new Set(["IntersectionObserver", "ResizeObserver"]);
 const BINDING_SITES = new Set(["AssignmentExpression", "BlockStatement", "VariableDeclarator"]);
 
@@ -89,24 +89,6 @@ function receiverOf({ callee }: Call) {
   const target = unwrap(callee);
 
   return target.type === "MemberExpression" ? target.object : undefined;
-}
-
-function isGlobalObject(context: Context, node: Node | undefined) {
-  const target = node && unwrap(node);
-
-  return (
-    target?.type === "Identifier" &&
-    GLOBAL_OBJECTS.has(target.name) &&
-    definitionOf(context, target) === undefined
-  );
-}
-
-function isGlobalCall(context: Context, { callee }: Call) {
-  const target = unwrap(callee);
-
-  return target.type === "Identifier"
-    ? definitionOf(context, target) === undefined
-    : target.type === "MemberExpression" && isGlobalObject(context, target.object);
 }
 
 function valueOf(context: Context, identifier: Identifier) {
@@ -442,22 +424,6 @@ function visitTimer(context: Context, state: Tracker, node: Call) {
   });
 }
 
-function visitFetch(context: Context, state: Tracker, node: Call) {
-  if (!isGlobalCall(context, node)) {
-    return;
-  }
-
-  state.acquisitions.push({
-    messageId: "fetch",
-    unreleased: (current) => {
-      const isRunBySetup = current.setup.has(findAncestor(node, isFunctionNode) ?? node);
-      const signal = findProperty(objectOf(context, node.arguments[1]), "signal");
-
-      return isRunBySetup && !isSignalAborted(context, current, signal) ? [node] : [];
-    },
-  });
-}
-
 function visitListener(context: Context, state: Tracker, node: Call) {
   const [type, handler, options] = node.arguments;
   const signal = findProperty(objectOf(context, options), "signal");
@@ -475,19 +441,17 @@ function visitListener(context: Context, state: Tracker, node: Call) {
 
 const visitors = new Map([
   ["addEventListener", visitListener],
-  ["fetch", visitFetch],
   ["setInterval", visitTimer],
   ["setTimeout", visitTimer],
 ]);
 
 function visitEffect(context: Context, state: Tracker, node: Call) {
-  const [setup] = node.arguments;
+  const root = effectSetupOf(context, node);
 
-  if (setup === undefined || !EFFECT_HOOKS.has(reactExportName(context, node.callee) ?? "")) {
+  if (root === undefined) {
     return;
   }
 
-  const root = unwrap(setup);
   const body = root.type === "ArrowFunctionExpression" ? unwrap(root.body) : undefined;
 
   state.setup.add(root);
@@ -570,10 +534,6 @@ function extendThroughCalls(state: Tracker, reached: Set<Node>, reaches: (node: 
 function reportLeaks(context: Context, state: Tracker) {
   extendThroughCalls(state, state.cleanup, (node) => isInCleanup(state, node));
 
-  extendThroughCalls(state, state.setup, (node) =>
-    state.setup.has(findAncestor(node, isFunctionNode) ?? node),
-  );
-
   for (const { messageId, unreleased } of state.acquisitions) {
     for (const node of unreleased(state)) {
       context.report({ messageId, node });
@@ -585,13 +545,11 @@ export const reactNoLeakedEffects = defineRule({
   meta: {
     docs: {
       description:
-        "Require every listener, timer, fetch and observer that a React effect starts to be released in its cleanup.",
+        "Require every listener, timer and observer that a React effect starts to be released in its cleanup.",
     },
     messages: {
       eventListener:
         '"addEventListener" here is never undone. Call removeEventListener with the same arguments in the effect cleanup, or abort its signal there.',
-      fetch:
-        '"fetch" here is never aborted. Pass it the signal of an AbortController and abort the controller in the effect cleanup.',
       intersectionObserver:
         '"IntersectionObserver" here is never disconnected. Call its disconnect method in the effect cleanup.',
       interval:

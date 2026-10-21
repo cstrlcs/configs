@@ -13,8 +13,10 @@ const HELP = `Usage: cstrlcs-configs <install|doctor|lint|fix> [options]
 Commands:
   install          Add the dependencies and configuration files
   doctor           Check that the project is configured correctly
-  lint             Run doctor, check lint, formatting and types, and run the tests
-  fix              Run doctor, fix lint and formatting, check types, and run the tests
+  lint             Run doctor, check lint, formatting, unused code, monorepo packages
+                   and types, and run the tests
+  fix              Run doctor, fix lint and formatting, check unused code, monorepo
+                   packages and types, and run the tests
 
 Options:
   --cwd, -c <dir>   Project directory (defaults to the current directory)

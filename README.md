@@ -9,10 +9,11 @@ Strict configurations for oxlint, oxfmt, TypeScript and VSCode.
 
 This package provides opinionated, strict configurations for modern JavaScript/TypeScript development. It includes:
 
-- **oxlint** configs (base, react, vue)
+- **oxlint** configs (base, react, vue, plus a library preset for published packages)
 - **oxfmt** configs (base)
-- **TypeScript** configs
-- **oxlint JS plugin** (`cstrlcs`) with configurable rules that Oxlint does not ship natively
+- **TypeScript** configs, plus a library config
+- **oxlint JS plugin** (`cstrlcs`) with rules that Oxlint does not ship natively
+- **Agent instructions** written into the project's `AGENTS.md`
 
 ## Installation
 
@@ -29,19 +30,27 @@ and log-level flags are not provided.
 
 This will:
 
-- Install `@cstrlcs/configs` and `@types/bun`, plus `oxlint`, `oxlint-tsgolint`, `oxfmt` and
-  `typescript` at the exact versions in `peerDependencies`, all as exact-pinned dev dependencies
+- Install `@cstrlcs/configs`, `@types/bun` and `bun-types`, plus `oxlint`, `oxlint-tsgolint`,
+  `oxfmt`, `typescript`, `knip` and `sherif` at the exact versions in `peerDependencies`, all as
+  exact-pinned dev dependencies. When `astro` is a dependency of the root or of any workspace, it
+  also installs the optional peer `@astrojs/compiler-rs`, which Oxfmt needs to format `.astro` files
 - Set `packageManager` in `package.json` to the running Bun version and `type` to `"module"`, and
   default `name` to the directory name and `private` to `true` when they are missing
 - Create `oxlint.config.ts` with the preset that matches the project (`vue`, `react` or `base`) and
   an empty [`cstrlcs/no-forbidden-dependencies`](#cstrlcsno-forbidden-dependencies), and
-  `oxfmt.config.ts`
-- Create `tsconfig.json` extending the base config
+  `oxfmt.config.ts`. For a [library](#library-preset), a package whose `package.json` sets
+  `"private": false`, it also extends the `library` preset
+- Create `tsconfig.json` extending the base config, or `vite` in Vite projects, and for a library
+  also `tsconfig/library.json`
 - Create `bun.d.ts` and include it in `tsconfig.json`
 - Add `lint` and `lint:fix` scripts to `package.json`
 - Write `.gitattributes` with LF line endings
 - Append the required entries to `.gitignore`
 - Copy `.vscode/settings.json` and `.vscode/extensions.json`
+- Write the shipped agent instructions into `AGENTS.md` between `<!-- BEGIN @cstrlcs/configs -->`
+  and `<!-- END @cstrlcs/configs -->`. It creates `AGENTS.md` when it is missing, appends the block
+  after the existing content when the markers are absent, and otherwise replaces only the text
+  between the markers
 - Warn about conflicting tool configs it finds, and when `cstrlcs/no-forbidden-dependencies` has no
   rules
 - Warn when a `.env` or `.env.*` file other than `.env*.example` was ever committed, in any branch
@@ -58,14 +67,15 @@ bunx @cstrlcs/configs fix
 
 Both commands run [`doctor`](#doctor) first and stop when it fails. `lint` then runs
 `oxlint --type-aware .` and `oxfmt --check`, and `fix` runs `oxlint --type-aware --fix` and
-`oxfmt`. Both then run `tsc --noEmit -p <dir>` in the root and in every workspace that has a
-`tsconfig.json`, and `bun run test` when
-`package.json` has a `test` script. Every step runs even when an earlier one fails, and the command
-fails when any step does.
+`oxfmt`. Both then run `knip` to report unused files, exports and dependencies, and, when
+`package.json` declares `workspaces`, `sherif` to check the monorepo's packages; neither applies
+fixes. Both then run `tsc --noEmit -p <dir>` in the root and in every workspace that has a
+`tsconfig.json`, and `bun run test` when `package.json` has a `test` script. Every step runs even
+when an earlier one fails, and the command fails when any step does.
 
-`oxlint`, `oxfmt` and `tsc` are resolved from the project's `node_modules` with `oxc-resolver`, so
-they always run at the versions the project installed. When one is missing the command fails
-instead of falling back to another copy.
+`oxlint`, `oxfmt`, `knip`, `sherif` and `tsc` are resolved from the project's `node_modules` with
+`oxc-resolver`, so they always run at the versions the project installed. When one is missing the
+command fails instead of falling back to another copy.
 
 ## Doctor
 
@@ -87,8 +97,11 @@ This verifies:
   `!.env*.example` when a `.env` or `.env.*` file exists in the root or in any workspace, written as is or
   with a `**/` prefix, and `node_modules` and `.claude` also without
   the trailing slash
-- `tsconfig.json` extends the expected preset and Bun test globals are set up
-- `oxlint.config.ts` imports the expected preset and `oxfmt.config.ts` imports the base preset
+- `tsconfig.json` extends the expected preset, plus `@cstrlcs/configs/tsconfig/library.json` for a
+  library, and Bun test globals are set up
+- `oxlint.config.ts` imports exactly the expected preset, plus `@cstrlcs/configs/oxlint/library.js`
+  for a library and never for other packages, and `oxfmt.config.ts` imports the base preset
+- `AGENTS.md` contains the `@cstrlcs/configs` block with exactly the shipped content
 - `cstrlcs/no-forbidden-dependencies` is declared in `oxlint.config.ts`. Declared without rules it
   only warns, and the message tells an agent how to map the project's boundaries or when to ignore
   it
@@ -96,24 +109,32 @@ This verifies:
 - No ESLint, Prettier, Biome, `.oxlintrc.json`, `.editorconfig` or `*.code-workspace` config exists
   in the root or in any workspace, and no workspace has its own `.vscode/settings.json`
 - All required packages are declared, `@cstrlcs/configs` is pinned to an exact version, and
-  `oxlint`, `oxlint-tsgolint`, `oxfmt` and `typescript` are declared and installed at the exact
-  `peerDependencies` versions
+  `oxlint`, `oxlint-tsgolint`, `oxfmt`, `typescript`, `knip` and `sherif` are declared and installed
+  at the exact `peerDependencies` versions, and so is `@astrojs/compiler-rs` when `astro` is a
+  dependency of the root or of any workspace
 
 The oxlint preset is `vue` when `vue` is a dependency of the root or of any workspace, otherwise
-`react` when `react` is, otherwise `base`.
+`react` when `react` is, otherwise `base`. The root package is a library when its `package.json`
+sets `"private": false`.
 
 ## Manual setup
 
 ```bash
-bun add -D --exact @cstrlcs/configs @types/bun
-bun add -D --exact $(jq -r '.peerDependencies | to_entries[] | "\(.key)@\(.value)"' node_modules/@cstrlcs/configs/package.json)
+bun add -D --exact @cstrlcs/configs @types/bun bun-types
+bun add -D --exact $(jq -r '.peerDependenciesMeta as $optional | .peerDependencies | to_entries[] | select($optional[.key] == null) | "\(.key)@\(.value)"' node_modules/@cstrlcs/configs/package.json)
+```
+
+In an Astro project, also add the optional peer Oxfmt needs to format `.astro` files:
+
+```bash
+bun add -D --exact @astrojs/compiler-rs@$(jq -r '.peerDependencies["@astrojs/compiler-rs"]' node_modules/@cstrlcs/configs/package.json)
 ```
 
 `oxlint.config.ts` (use `react.js` or `vue.js` instead of `base.js` for React or Vue projects):
 
 ```ts
-import { defineConfig } from "oxlint";
 import config from "@cstrlcs/configs/oxlint/base.js";
+import { defineConfig } from "oxlint";
 
 export default defineConfig({
   extends: [config],
@@ -123,11 +144,26 @@ export default defineConfig({
 });
 ```
 
+For a library (`"private": false`), also extend the library preset:
+
+```ts
+import config from "@cstrlcs/configs/oxlint/base.js";
+import library from "@cstrlcs/configs/oxlint/library.js";
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
+  extends: [config, library],
+  rules: {
+    "cstrlcs/no-forbidden-dependencies": ["error"],
+  },
+});
+```
+
 `oxfmt.config.ts`:
 
 ```ts
-import { defineConfig } from "oxfmt";
 import config from "@cstrlcs/configs/oxfmt/base.js";
+import { defineConfig } from "oxfmt";
 
 export default defineConfig(config);
 ```
@@ -141,6 +177,9 @@ export default defineConfig(config);
   "include": ["src", "bun.d.ts"]
 }
 ```
+
+For a library, use
+`"extends": ["@cstrlcs/configs/tsconfig/base.json", "@cstrlcs/configs/tsconfig/library.json"]`.
 
 `bun.d.ts`:
 
@@ -168,7 +207,9 @@ export {};
 
 Copy `.vscode/settings.json` and `.vscode/extensions.json` from `node_modules/@cstrlcs/configs/.vscode`,
 write `.gitattributes` with the contents of `GITATTRIBUTES` in `src/cli/requirements.ts`, and add the
-`.gitignore` entries listed under [Doctor](#doctor).
+`.gitignore` entries listed under [Doctor](#doctor). Add the contents of
+`node_modules/@cstrlcs/configs/agents/AGENTS.md` to `AGENTS.md`, with a
+`<!-- BEGIN @cstrlcs/configs -->` line before it and a `<!-- END @cstrlcs/configs -->` line after it.
 
 ## Bun tests
 
@@ -218,9 +259,18 @@ update that adds or removes a Vitest rule requires an explicit compatibility rev
 All supported Oxlint categories are included and emitted as errors, including type-aware,
 pedantic, restriction, and nursery rules. Type-aware linting and experimental TypeScript
 diagnostics are enabled in the config itself, so the same checks run from the CLI and editor.
-The baseline also enforces explicit return types, rejects ordinary type assertions, bans `any`
-and non-null assertions, checks unsafe TypeScript operations and floating promises, and enables
-strict complexity, callback, function, parameter, statement, snapshot, and file-size limits.
+The baseline infers return types instead of annotating them
+([`cstrlcs/no-explicit-return-type`](#cstrlcsno-explicit-return-type)), rejects ordinary type
+assertions, bans `any` and non-null assertions, and checks unsafe TypeScript operations and
+floating promises. It limits complexity (12), nesting depth (3), nested callbacks, parameters (3),
+snapshot size and file size, but sets no per-function line or statement limit, because those
+reward splitting one behavior into helpers that only make sense read together. Classes declare
+fields as class properties, because `erasableSyntaxOnly` rejects parameter properties. Exports are
+named: `import/no-default-export` applies everywhere except declaration files, config files
+(`*.config.*`, `.*rc.*`), Storybook files and the folders and files frameworks load by default
+export: `app/`, `pages/`, `routes/`, `root.*`, `entry.client.*`, `entry.server.*`,
+`middleware.*`, `proxy.*`, `instrumentation.*` and Nuxt's `server/api/`, `server/routes/`,
+`server/middleware/` and `server/plugins/`.
 JSX and TSX files must use PascalCase filenames, such as `UserCard.tsx`; other files may use
 camelCase, PascalCase, or kebab-case. Identifiers must be at least two characters long, except `_`
 and generic type parameters, and common abbreviations such as `err`, `evt`, `idx`, `cb`, `obj`,
@@ -239,10 +289,28 @@ plugin is enabled, so callback errors must be handled and paths are not built by
 from `node:process` and `node:buffer` (or required in CommonJS config files); the React and Vue
 presets leave them alone, because bundlers replace `process.env` only on the free global.
 
-Oxlint 1.80.0 has no built-in rules for hardcoded secrets, general commented-out code, TODOs
-that specifically lack an issue reference, or disable comments that specifically lack a
-rationale. Those checks are intentionally not emulated; the `cstrlcs` plugin only adds the
-rules described below.
+Oxlint 1.80.0 has no built-in rules for hardcoded secrets, general commented-out code, or TODOs
+that specifically lack an issue reference. Those checks are intentionally not emulated; the
+`cstrlcs` plugin only adds the rules described below.
+[`cstrlcs/no-comments`](#cstrlcsno-comments) also rejects inline disable directives, so a rule is
+turned off only through `overrides` in `oxlint.config.ts`. Graph-wide checks that a per-file linter cannot see, such as unused files, exports and
+dependencies, run through `knip` in [`lint`](#lint-and-fix).
+
+## Library preset
+
+A package published to a registry documents and types its public API, so a library, a package
+whose `package.json` sets `"private": false`, extends two more configs on top of its preset:
+
+- `oxlint/library.js` allows a JSDoc block on exported declarations
+  (`cstrlcs/no-comments` with `allowExportedDocs`). It turns off `cstrlcs/no-explicit-return-type`
+  and `typescript/no-inferrable-types`, because `isolatedDeclarations` requires annotations that
+  those rules reject, such as the return type of `export function isEmpty(text: string): boolean`
+  or `export const port: number = Number(value)`.
+- `tsconfig/library.json` turns on `declaration` and `isolatedDeclarations`, so declaration files
+  can be emitted file by file without the type checker, and turns off `allowJs` and `checkJs`,
+  which `isolatedDeclarations` does not allow.
+
+Every other rule stays as strict as in apps.
 
 ## Plugins
 
@@ -250,7 +318,9 @@ rules described below.
 Every preset loads it and enables every rule below except `cstrlcs/no-forbidden-dependencies`,
 which needs project-specific options, so it stays out of the presets and the installer adds it to
 `oxlint.config.ts`. A rule is only added here when no native Oxlint rule covers it, and none has
-options: each one always applies its strictest behavior.
+options for projects to set: each one always applies its strictest behavior. The one preset option
+is `allowExportedDocs` on `cstrlcs/no-comments`, which only the [library preset](#library-preset)
+sets.
 
 ### `cstrlcs/name-after-property`
 
@@ -307,15 +377,23 @@ the path relative to the directory Oxlint runs in. `$1`, `$2`, ... in `to` refer
 groups of `from.path`.
 
 Imports are resolved with `oxc-resolver`, the resolver Oxlint uses natively, so tsconfig
-`paths`, `.js` → `.ts` extension aliases and package `exports` all work. Built-ins and
-unresolvable imports are matched as written. Static imports, `export ... from` and `import()`
-with a string literal are checked; CommonJS `require` is not. Type-only imports count too.
+`paths`, `.js` → `.ts` extension aliases and package `exports` all work. Symlinks resolve to
+their real path, and a Bun isolated-install store segment
+(`node_modules/.bun/<name>@<version>/node_modules/`, `@scope+name@<version>` for scoped packages)
+collapses to `node_modules/`, so a package matches `node_modules/<name>/...` relative to the
+directory Oxlint runs in, whichever linker installed it and whichever workspace imports it.
+Built-ins match as `node:<name>`, so `fs` and `node:fs` both match `^node:`. An import that does
+not resolve still matches where it would be: a bare package specifier as
+`node_modules/<specifier>/` (so `^node_modules/hono/` fires even when `hono` is not installed), a
+relative path as the path it points to; anything else (such as `bun:test`) matches as written.
+Static imports, `export ... from` and `import()` with a string literal are checked; CommonJS
+`require` is not. Type-only imports count too.
 
 For cycles use the native `import/no-cycle`, already enabled in every preset.
 
 ```ts
-import { defineConfig } from "oxlint";
 import config from "@cstrlcs/configs/oxlint/base.js";
+import { defineConfig } from "oxlint";
 
 const MODULES = "^src/modules";
 
@@ -341,15 +419,53 @@ export default defineConfig({
 });
 ```
 
+An entry with `allow` instead of `to` fails closed: an importer matching `from` may depend only
+on targets matching `allow` (`path`, `pathNot` and `$1`, `$2`, ... work as in `to`), and every
+other import is reported. Each entry takes either `to` or `allow`, never both. Allow entries suit
+layers, where listing what a layer may use is safer than listing everything it may not:
+
+```ts
+const SRC = "^src";
+
+export default defineConfig({
+  extends: [config],
+  rules: {
+    "cstrlcs/no-forbidden-dependencies": [
+      "error",
+      {
+        name: "domain-is-pure",
+        comment: "domain depends only on itself and zod.",
+        from: { path: `${SRC}/domain/` },
+        allow: { path: [`${SRC}/domain/`, "^node_modules/zod/"] },
+      },
+      {
+        name: "application-uses-domain",
+        from: { path: `${SRC}/application/` },
+        allow: { path: [`${SRC}/(application|domain)/`, "^node:"] },
+      },
+    ],
+  },
+});
+```
+
+An allow entry without `from` applies to every file.
+
 Severity applies to the whole Oxlint rule, not to each entry.
 
 ### `cstrlcs/no-comments`
 
 Forbids comments, including JSDoc (`/** */`), so code explains itself through names and
-structure. License headers (`/*! */`), shebangs, `oxlint-`/`eslint-` disable and enable directives,
-`@ts-` directives, and triple-slash references are allowed. The rule has no options; silence a
-required magic comment with a disable directive. Presets turn off `eslint/capitalized-comments`
-in its favor.
+structure. License headers (`/*! */`), shebangs, `@ts-` directives and triple-slash references
+are allowed. Inline `oxlint-`/`eslint-` disable and enable directives are reported too: code that
+needs one should change, and when a rule really cannot apply to some files, an `overrides` entry
+in `oxlint.config.ts` turns it off there, in one reviewed place. That also covers a required magic
+comment. Presets turn off `eslint/capitalized-comments` in its favor.
+
+The option `{ allowExportedDocs: true }` also allows a JSDoc block that directly precedes, with
+only whitespace between, an exported declaration (`export function`, `export const`/`let`,
+`export class`, `export interface`, `export type`, `export enum`, `export default ...`) or a
+member of an exported class or interface. Every other comment is still reported. Only the
+[library preset](#library-preset) sets it.
 
 ### `cstrlcs/no-explicit-return-type`
 
@@ -537,9 +653,48 @@ or a template literal without expressions. A package's own `dist` path, like
 
 ### `cstrlcs/no-export-assignment`
 
-Forbids TypeScript's CommonJS `export =`, so modules use `export default` or named exports.
+Forbids TypeScript's CommonJS `export =`, so modules use named exports.
 Declaration files and `declare module` blocks are allowed, since they describe CommonJS packages.
-There is no fix, because `export default` changes what consumers import.
+There is no fix, because a named export changes what consumers import.
+
+### `cstrlcs/no-env-access`
+
+Reports reading the environment through `process.env`, `Bun.env` or `import.meta.env`, including
+destructuring (`const { env } = process`) and `import { env } from "node:process"`. `process`
+counts whether it is the global or imported as a default or namespace from `node:process` or
+`process`. Read the environment in one `env.ts` module that parses it with a schema, and import
+the parsed values everywhere else. Files named `env.ts` (or `env.js`, `env.mts`, `env.cts`,
+`env.mjs`, `env.cjs`), test files and `*.config.*` files are skipped. It has no options and no
+fix. `node/no-process-env` stays off, because it only sees the global `process`, which the base
+preset forbids in favor of the `node:process` import.
+
+### `cstrlcs/no-test-code-in-production`
+
+Reports production code that imports test-only packages (`vitest`, `@vitest/*`, `bun:test`,
+`@testing-library/*`, `msw`, `@playwright/test`, `playwright`, `fast-check`, `@fast-check/*`,
+`testcontainers`, `@testcontainers/*`) or a module that resolves into a test file, a
+`test-utils.*` file, or a `tests/`, `__tests__/`, `fixtures/`, `__fixtures__/` or `__mocks__/`
+folder. It checks imports (type-only included), re-exports, `import()` calls with a static string
+and `import()` types, and resolves aliases through tsconfig `paths`. Test files, files under test,
+e2e, fixture and mock folders, `*.e2e.*`, `*.bench.*`, `test-utils.*`, `*.config.*` and
+declaration files are not production code and are skipped. It has no options and no fix.
+
+### `cstrlcs/no-cross-package-relative-import`
+
+Reports a relative import, re-export or `import()` whose target lies outside the folder of the
+nearest `package.json` above the importing file, such as `../../ui/src/button` from
+`packages/app/src`. Depend on the other package by name and import what it exports, so its
+public interface stays the only way in. It has no options and no fix.
+
+### `cstrlcs/no-reexport-only-files`
+
+Reports a module made only of re-exports: `export * from`, `export * as x from`,
+`export { a } from`, or imports that are exported again unchanged. `oxc/no-barrel-file` only
+counts `export *`. A package entry point named in the nearest `package.json` under `exports` (any
+subpath or condition, `*` patterns included), `main`, `module`, `types` or `bin` is allowed, and so
+is its source: a target under `dist/`, `build/`, `lib/` or `out/` also allows the same path under
+`src/`. Extensions are ignored, so `./dist/index.js` covers `src/index.ts`. Declaration files are
+skipped. It has no options and no fix.
 
 ### `cstrlcs/sort-specifiers`
 
@@ -606,14 +761,16 @@ Reports code that rebuilds a built-in.
 ### React rules
 
 The `cstrlcs/react-*` rules check React code that no native Oxlint rule covers. They have no
-options. Every rule except `cstrlcs/react-no-leaked-text` runs only when `react` resolves from the
-linted file's nearest `package.json`, so a Vue or Solid project that reuses React's hook names is
+options. Every rule except `cstrlcs/react-no-leaked-text` and
+`cstrlcs/react-native-no-deprecated-apis` runs only when `react` resolves from the linted file's
+nearest `package.json`, so a Vue or Solid project that reuses React's hook names is
 skipped, and `cstrlcs/react-no-legacy-apis` also reads the installed version. A React API call
 counts only when it traces back to `react` or `react-dom`: a named, aliased, default or namespace
 import, a `require`, a local alias of either, or an unbound `React`, `react` or `ReactDOM` global.
 A same-named function from another library or a parameter is skipped. `cstrlcs/react-naming` and
 `cstrlcs/react-no-leaked-effects` also accept an unbound hook name, such as `useRef()` with no
 import. `cstrlcs/react-no-leaked-text` looks only at JSX text, so it checks any JSX.
+`cstrlcs/react-native-no-deprecated-apis` runs when `react-native` or `expo` resolves instead.
 
 - `cstrlcs/react-naming`: names that hide what a React value holds. A value from `createContext`
   ends in `Context` (`CartContext`), a value from `useRef` is `ref` or ends in `Ref`, and a value
@@ -630,9 +787,9 @@ import. `cstrlcs/react-no-leaked-text` looks only at JSX text, so it checks any 
   setup returns, including a named one, and any local function or method it calls.
   `setTimeout`/`setInterval` ids must reach `clearTimeout`/`clearInterval`. `addEventListener`
   needs a `removeEventListener` with the same target, type (a literal, or a `const` that holds
-  one), listener binding and `capture` flag, or an aborted `signal`. A `fetch` run by the effect
-  needs the `signal` of an `AbortController` the cleanup aborts, and a `ResizeObserver` or
-  `IntersectionObserver` must be disconnected, or each observed element unobserved. Targets
+  one), listener binding and `capture` flag, or an aborted `signal`. A `ResizeObserver` or
+  `IntersectionObserver` must be disconnected, or each observed element unobserved. Fetching in an
+  effect is left to `cstrlcs/react-no-fetch-in-effect`. Targets
   imported from `react-native`, effects whose setup is not a function literal, and
   `useRef(new ResizeObserver())` are not checked.
 - `cstrlcs/react-no-leaked-text`: characters in JSX text that render by accident. A `$` right
@@ -649,6 +806,25 @@ import. `cstrlcs/react-no-leaked-text` looks only at JSX text, so it checks any 
   `<Context.Provider>` becomes `<Context>`, `useContext` becomes `use` and `useFormState` becomes
   `useActionState`, while `flushSync` is reported without a fix and `createRef` is reported outside
   class bodies. A `<…Context.Provider>` whose context cannot be traced is reported without a fix.
+- `cstrlcs/react-no-mirrored-props`: state initialized from a prop, which stops following the
+  parent after the first render. `useState(x)`, `useState(() => x)` and `useReducer(reducer, x)`
+  are reported when `x` is a destructured prop, `props.x` or `const { x } = props`, also through
+  `??`, `||`, `&&` and `?:`. A prop named `initial…` or `default…` is a deliberate seed and is not
+  reported. State copied from a `useQuery`, `useSuspenseQuery` or `useInfiniteQuery` result from
+  `@tanstack/react-query`, or from a value read with `use`, is reported too, because the copy stops
+  following the query or promise.
+- `cstrlcs/react-no-fetch-in-effect`: network requests started inside `useEffect`,
+  `useLayoutEffect` or `useInsertionEffect`, including nested functions and async IIFEs. It covers
+  global `fetch` (also on `window` and `globalThis`), the default imports of `axios` and `ky`,
+  `ofetch` and `$fetch` from `ofetch`, and their request methods. Fetch server data in a route
+  loader, a Server Component or TanStack Query instead.
+- `cstrlcs/react-native-no-deprecated-apis`: React Native and Expo APIs that the installed
+  `react-native` or `expo` version deprecated or removed: `SafeAreaView` imported from
+  `react-native` (React Native 0.81; use `react-native-safe-area-context`), imports and re-exports
+  of `react-native/Libraries/*` (0.80), `StyleSheet.absoluteFillObject` (deprecated in 0.82,
+  removed in 0.85, fixed to `StyleSheet.absoluteFill`), `expo-av` (Expo SDK 53; use `expo-video`
+  and `expo-audio`) and `@expo/vector-icons` (Expo SDK 56; use the `@react-native-vector-icons/*`
+  packages).
 
 ### Tailwind CSS rules
 
@@ -678,7 +854,8 @@ Class names are read from:
 
 Strings inside conditional branches, the right side of `&&`/`||`, `+` concatenations, template
 literals and arrays are included. Oxlint only parses the script part of Vue, Svelte and Astro
-files, so template markup there is not checked.
+files, so template markup there is not checked. Oxfmt still sorts the classes in Vue and Astro
+templates.
 
 `cstrlcs/tailwind-canonical-classes` reports class lists that are not in their canonical v4
 spelling, with a fix:
@@ -731,14 +908,15 @@ revealed by a `hover:` or `group-hover:` variant with no `focus` variant reveali
 writing `outline-hidden`, which keeps a transparent outline that forced colors mode paints.
 
 Class order and whitespace are left to Oxfmt: the base Oxfmt preset enables
-`sortTailwindcss` for `class`, `className` and the same class-merging functions. Without a
+`sortTailwindcss` for `class`, `className` and the same class-merging functions, and enables
+`astro` so `.astro` files are formatted and their template classes sorted too. Without a
 `stylesheet` it sorts against Tailwind's default theme, so classes from a custom theme or
 `@utility` are treated as unknown and moved to the front. Point it at the project's CSS entry to
 sort them too:
 
 ```ts
-import { defineConfig } from "oxfmt";
 import config from "@cstrlcs/configs/oxfmt/base.js";
+import { defineConfig } from "oxfmt";
 
 export default defineConfig({
   ...config,

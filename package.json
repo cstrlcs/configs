@@ -22,10 +22,12 @@
   },
   "files": [
     ".vscode",
+    "agents",
     "oxlint",
     "oxfmt",
     "plugins",
     "src/cli",
+    "!src/cli/**/*.test.ts",
     "tsconfig"
   ],
   "type": "module",
@@ -53,10 +55,18 @@
     "zod": "4.5.1"
   },
   "peerDependencies": {
-    "oxfmt": "0.65.0",
+    "@astrojs/compiler-rs": "0.5.2",
+    "knip": "6.42.1",
+    "oxfmt": "0.74.0",
     "oxlint": "1.80.0",
     "oxlint-tsgolint": "7.0.2001",
+    "sherif": "1.13.0",
     "typescript": "7.0.2"
+  },
+  "peerDependenciesMeta": {
+    "@astrojs/compiler-rs": {
+      "optional": true
+    }
   },
   "engines": {
     "bun": ">=1.4.0"
